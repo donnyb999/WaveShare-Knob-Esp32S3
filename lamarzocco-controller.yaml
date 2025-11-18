@@ -14,7 +14,7 @@ packages:
   esp_settings: !include lamarzocco/esp-config.yaml
   ha_settings: !include lamarzocco/ha-config.yaml
   display: !include lamarzocco/waveshare.yaml
-  lvgl: !include lamarzocco/lvgl.yaml
+#  lvgl: !include lamarzocco/lvgl.yaml
 
 # External component for ST77916 display
 external_components:

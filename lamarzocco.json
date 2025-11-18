@@ -1,0 +1,478 @@
+{
+    "home_assistant": {
+      "installation_type": "Home Assistant OS",
+      "version": "2025.11.2",
+      "dev": false,
+      "hassio": true,
+      "virtualenv": false,
+      "python_version": "3.13.9",
+      "docker": true,
+      "arch": "x86_64",
+      "timezone": "America/Winnipeg",
+      "os_name": "Linux",
+      "os_version": "6.12.51-haos",
+      "container_arch": "amd64",
+      "supervisor": "2025.11.2",
+      "host_os": "Home Assistant OS 16.3",
+      "docker_version": "28.3.3",
+      "chassis": "vm",
+      "run_as_root": true
+    },
+    "custom_components": {},
+    "integration_manifest": {
+      "domain": "lamarzocco",
+      "name": "La Marzocco",
+      "bluetooth": [
+        {
+          "local_name": "MICRA_*"
+        },
+        {
+          "local_name": "MINI_*"
+        },
+        {
+          "local_name": "GS3_*"
+        },
+        {
+          "local_name": "GS3AV_*"
+        }
+      ],
+      "codeowners": [
+        "zweckj"
+      ],
+      "config_flow": true,
+      "dependencies": [
+        "bluetooth_adapters"
+      ],
+      "dhcp": [
+        {
+          "registered_devices": true
+        },
+        {
+          "hostname": "gs[0-9][0-9][0-9][0-9][0-9][0-9]"
+        },
+        {
+          "hostname": "lm[0-9][0-9][0-9][0-9][0-9][0-9]"
+        },
+        {
+          "hostname": "mr[0-9][0-9][0-9][0-9][0-9][0-9]"
+        }
+      ],
+      "documentation": "https://www.home-assistant.io/integrations/lamarzocco",
+      "integration_type": "device",
+      "iot_class": "cloud_push",
+      "loggers": [
+        "pylamarzocco"
+      ],
+      "quality_scale": "platinum",
+      "requirements": [
+        "pylamarzocco==2.1.2"
+      ],
+      "is_built_in": true,
+      "overwrites_built_in": false
+    },
+    "setup_times": {
+      "null": {
+        "setup": 8.801000006997128e-06
+      },
+      "01K7GAQM1H36JG2131ZAPE2SPY": {
+        "wait_import_platforms": -0.008251823999984254,
+        "wait_base_component": -0.00038829800001849435,
+        "config_entry_setup": 2.102987282000015
+      }
+    },
+    "data": {
+      "device": {
+        "serial_number": "**REDACTED**",
+        "dashboard": {
+          "serial_number": "**REDACTED**",
+          "type": "CoffeeMachine",
+          "name": "Micra",
+          "location": "HOME_OR_DWELLING_SPACE",
+          "model_code": "LINEAMICRA",
+          "model_name": "Linea Micra",
+          "connected": true,
+          "connection_date": "2025-11-17T02:01:17.130000+00:00",
+          "offline_mode": false,
+          "require_firmware_update": false,
+          "available_firmware_update": false,
+          "coffee_station": null,
+          "image_url": "https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-nero_op.png",
+          "ble_auth_token": "3cdea2be367e233a1690b6a7481d716e2d4ccba78c6b1e0574501c8ed911f272",
+          "widgets": [
+            {
+              "code": "CMMachineStatus",
+              "index": 1,
+              "output": {
+                "status": "StandBy",
+                "available_modes": [
+                  "BrewingMode",
+                  "StandBy"
+                ],
+                "mode": "StandBy",
+                "next_status": {
+                  "status": "PoweredOn",
+                  "start_time": "2025-11-17T12:45:14.107000+00:00"
+                },
+                "brewing_start_time": null
+              }
+            },
+            {
+              "code": "CMCoffeeBoiler",
+              "index": 1,
+              "output": {
+                "status": "StandBy",
+                "enabled": true,
+                "enabled_supported": false,
+                "target_temperature": 89.0,
+                "target_temperature_min": 80,
+                "target_temperature_max": 100,
+                "target_temperature_step": 0.1,
+                "ready_start_time": null
+              }
+            },
+            {
+              "code": "CMSteamBoilerLevel",
+              "index": 1,
+              "output": {
+                "status": "StandBy",
+                "enabled": true,
+                "enabled_supported": true,
+                "target_level": "Level2",
+                "target_level_supported": true,
+                "ready_start_time": null
+              }
+            },
+            {
+              "code": "CMPreBrewing",
+              "index": 1,
+              "output": {
+                "available_modes": [
+                  "PreBrewing",
+                  "PreInfusion",
+                  "Disabled"
+                ],
+                "mode": "PreInfusion",
+                "times": {
+                  "pre_infusion": [
+                    {
+                      "seconds_min": {
+                        "In": 1.0,
+                        "Out": 1.0
+                      },
+                      "seconds_max": {
+                        "In": 25.0,
+                        "Out": 25.0
+                      },
+                      "seconds_step": {
+                        "In": 0.1,
+                        "Out": 0.1
+                      },
+                      "dose_index": "ByGroup",
+                      "seconds": {
+                        "In": 0.0,
+                        "Out": 7.3
+                      }
+                    }
+                  ],
+                  "pre_brewing": [
+                    {
+                      "seconds_min": {
+                        "In": 1.0,
+                        "Out": 1.0
+                      },
+                      "seconds_max": {
+                        "In": 9.0,
+                        "Out": 9.0
+                      },
+                      "seconds_step": {
+                        "In": 0.1,
+                        "Out": 0.1
+                      },
+                      "dose_index": "ByGroup",
+                      "seconds": {
+                        "In": 0.0,
+                        "Out": 6.5
+                      }
+                    }
+                  ]
+                },
+                "dose_index_supported": false
+              }
+            },
+            {
+              "code": "CMBackFlush",
+              "index": 1,
+              "output": {
+                "status": "Off",
+                "last_cleaning_start_time": "2025-10-09T00:03:38.939000+00:00"
+              }
+            }
+          ],
+          "config": {
+            "CMMachineStatus": {
+              "status": "StandBy",
+              "available_modes": [
+                "BrewingMode",
+                "StandBy"
+              ],
+              "mode": "StandBy",
+              "next_status": {
+                "status": "PoweredOn",
+                "start_time": "2025-11-17T12:45:14.107000+00:00"
+              },
+              "brewing_start_time": null
+            },
+            "CMCoffeeBoiler": {
+              "status": "StandBy",
+              "enabled": true,
+              "enabled_supported": false,
+              "target_temperature": 89.0,
+              "target_temperature_min": 80,
+              "target_temperature_max": 100,
+              "target_temperature_step": 0.1,
+              "ready_start_time": null
+            },
+            "CMSteamBoilerLevel": {
+              "status": "StandBy",
+              "enabled": true,
+              "enabled_supported": true,
+              "target_level": "Level2",
+              "target_level_supported": true,
+              "ready_start_time": null
+            },
+            "CMPreBrewing": {
+              "available_modes": [
+                "PreBrewing",
+                "PreInfusion",
+                "Disabled"
+              ],
+              "mode": "PreInfusion",
+              "times": {
+                "pre_infusion": [
+                  {
+                    "seconds_min": {
+                      "In": 1.0,
+                      "Out": 1.0
+                    },
+                    "seconds_max": {
+                      "In": 25.0,
+                      "Out": 25.0
+                    },
+                    "seconds_step": {
+                      "In": 0.1,
+                      "Out": 0.1
+                    },
+                    "dose_index": "ByGroup",
+                    "seconds": {
+                      "In": 0.0,
+                      "Out": 7.3
+                    }
+                  }
+                ],
+                "pre_brewing": [
+                  {
+                    "seconds_min": {
+                      "In": 1.0,
+                      "Out": 1.0
+                    },
+                    "seconds_max": {
+                      "In": 9.0,
+                      "Out": 9.0
+                    },
+                    "seconds_step": {
+                      "In": 0.1,
+                      "Out": 0.1
+                    },
+                    "dose_index": "ByGroup",
+                    "seconds": {
+                      "In": 0.0,
+                      "Out": 6.5
+                    }
+                  }
+                ]
+              },
+              "dose_index_supported": false
+            },
+            "CMBackFlush": {
+              "status": "Off",
+              "last_cleaning_start_time": "2025-10-09T00:03:38.939000+00:00"
+            }
+          }
+        },
+        "settings": {
+          "serial_number": "**REDACTED**",
+          "type": "CoffeeMachine",
+          "name": "Micra",
+          "location": "HOME_OR_DWELLING_SPACE",
+          "model_code": "LINEAMICRA",
+          "model_name": "Linea Micra",
+          "connected": true,
+          "connection_date": "2025-11-17T02:01:17.130000+00:00",
+          "offline_mode": false,
+          "require_firmware_update": false,
+          "available_firmware_update": false,
+          "coffee_station": null,
+          "image_url": "https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-nero_op.png",
+          "ble_auth_token": "3cdea2be367e233a1690b6a7481d716e2d4ccba78c6b1e0574501c8ed911f272",
+          "actual_firmwares": [
+            {
+              "type": "Gateway",
+              "build_version": "v5.4.12",
+              "change_log": "What\u2019s new in this version:\n\n* fixed connection issues that occurred on some machines.\n* Local mode\n* Smart scheduling",
+              "thing_model_code": "LineaMicra",
+              "status": "Updated",
+              "available_update": null
+            },
+            {
+              "type": "Machine",
+              "build_version": "v1.17",
+              "change_log": "None",
+              "thing_model_code": "LineaMicra",
+              "status": "Updated",
+              "available_update": null
+            }
+          ],
+          "wifi_ssid": "HillHouse",
+          "wifi_rssi": -50,
+          "plumb_in_supported": true,
+          "is_plumbed_in": true,
+          "cropster_supported": false,
+          "cropster_active": false,
+          "hemro_supported": false,
+          "hemro_active": false,
+          "factory_reset_supported": true,
+          "auto_update_supported": true,
+          "auto_update": true,
+          "firmwares": {
+            "Gateway": {
+              "type": "Gateway",
+              "build_version": "v5.4.12",
+              "change_log": "What\u2019s new in this version:\n\n* fixed connection issues that occurred on some machines.\n* Local mode\n* Smart scheduling",
+              "thing_model_code": "LineaMicra",
+              "status": "Updated",
+              "available_update": null
+            },
+            "Machine": {
+              "type": "Machine",
+              "build_version": "v1.17",
+              "change_log": "None",
+              "thing_model_code": "LineaMicra",
+              "status": "Updated",
+              "available_update": null
+            }
+          }
+        },
+        "statistics": {
+          "serial_number": "**REDACTED**",
+          "type": "CoffeeMachine",
+          "name": "",
+          "location": null,
+          "model_code": "LINEAMICRA",
+          "model_name": "Linea Micra",
+          "connected": false,
+          "connection_date": "2025-11-17T05:44:41.458160+00:00",
+          "offline_mode": false,
+          "require_firmware_update": false,
+          "available_firmware_update": false,
+          "coffee_station": null,
+          "image_url": "",
+          "ble_auth_token": null,
+          "firmwares": null,
+          "selected_widget_codes": [],
+          "all_widget_codes": [],
+          "selected_widgets": [],
+          "widgets": {
+            "COFFEE_AND_FLUSH_COUNTER": {
+              "total_coffee": 975,
+              "total_flush": 1476
+            }
+          }
+        },
+        "schedule": {
+          "serial_number": "**REDACTED**",
+          "type": "CoffeeMachine",
+          "name": "Micra",
+          "location": "HOME_OR_DWELLING_SPACE",
+          "model_code": "LINEAMICRA",
+          "model_name": "Linea Micra",
+          "connected": true,
+          "connection_date": "2025-11-17T02:01:17.130000+00:00",
+          "offline_mode": false,
+          "require_firmware_update": false,
+          "available_firmware_update": false,
+          "coffee_station": null,
+          "image_url": "https://lion.lamarzocco.io/img/thing-model/detail/lineamicra/lineamicra-1-c-nero_op.png",
+          "ble_auth_token": "3cdea2be367e233a1690b6a7481d716e2d4ccba78c6b1e0574501c8ed911f272",
+          "smart_wake_up_sleep_supported": true,
+          "smart_wake_up_sleep": {
+            "smart_stand_by_enabled": true,
+            "smart_stand_by_minutes": 30,
+            "smart_stand_by_minutes_min": 1,
+            "smart_stand_by_minutes_max": 240,
+            "smart_stand_by_minutes_step": 1,
+            "smart_stand_by_after": "LastBrewing",
+            "schedules": [
+              {
+                "id": "4VY84rH",
+                "enabled": true,
+                "onTimeMinutes": 405,
+                "offTimeMinutes": 570,
+                "steamBoiler": true,
+                "days": [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday"
+                ]
+              },
+              {
+                "id": "kwxVZ1M",
+                "enabled": true,
+                "onTimeMinutes": 480,
+                "offTimeMinutes": 1200,
+                "steamBoiler": true,
+                "days": [
+                  "Sunday",
+                  "Saturday"
+                ]
+              }
+            ],
+            "schedules_dict": {
+              "4VY84rH": {
+                "id": "4VY84rH",
+                "enabled": true,
+                "onTimeMinutes": 405,
+                "offTimeMinutes": 570,
+                "steamBoiler": true,
+                "days": [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday"
+                ]
+              },
+              "kwxVZ1M": {
+                "id": "kwxVZ1M",
+                "enabled": true,
+                "onTimeMinutes": 480,
+                "offTimeMinutes": 1200,
+                "steamBoiler": true,
+                "days": [
+                  "Sunday",
+                  "Saturday"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "bluetooth_available": {
+        "options_enabled": true,
+        "mac": false,
+        "token": true
+      }
+    },
+    "issues": []
+  }
