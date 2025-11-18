@@ -266,8 +266,9 @@ lvgl:
                   text_color: 0x000000
                   align: CENTER
 
-# Rotary Encoder
+# Rotary Encoder and Home Assistant Sensors
 sensor:
+  # Rotary Encoder
   - platform: rotary_encoder_custom
     name: "Rotary Encoder"
     id: rotary_encoder
@@ -300,25 +301,6 @@ sensor:
             then:
               - script.execute: handle_encoder_ccw
 
-# Home Assistant Sensors - Reading machine state
-binary_sensor:
-  # Power state (using binary_sensor for switch)
-  - platform: homeassistant
-    id: lm_power_state
-    entity_id: ${lm_power}
-    on_state:
-      then:
-        - lambda: |-
-            std::string state_str = x ? "ON" : "OFF";
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Power: %s", state_str.c_str());
-            id(power_label_text) = std::string(buf);
-        - lvgl.label.update:
-            id: power_label
-            text: !lambda 'return id(power_label_text);'
-        - script.execute: update_selection_highlight
-
-sensor:
   # Coffee boiler temperature
   - platform: homeassistant
     id: lm_coffee_temp_sensor
@@ -335,6 +317,42 @@ sensor:
         - lvgl.label.update:
             id: temp_label
             text: !lambda 'return id(temp_label_text);'
+        - script.execute: update_selection_highlight
+
+  # PreInfusion time
+  - platform: homeassistant
+    id: lm_preinfusion_time_sensor
+    entity_id: ${lm_preinfusion_time}
+    attribute: native_value
+    unit_of_measurement: "s"
+    accuracy_decimals: 1
+    on_value:
+      then:
+        - lambda: |-
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreInf: %.1fs", x);
+            id(preinfusion_label_text) = std::string(buf);
+        - lvgl.label.update:
+            id: preinfusion_label
+            text: !lambda 'return id(preinfusion_label_text);'
+        - script.execute: update_selection_highlight
+
+# Home Assistant Sensors - Reading machine state
+binary_sensor:
+  # Power state (using binary_sensor for switch)
+  - platform: homeassistant
+    id: lm_power_state
+    entity_id: ${lm_power}
+    on_state:
+      then:
+        - lambda: |-
+            std::string state_str = x ? "ON" : "OFF";
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Power: %s", state_str.c_str());
+            id(power_label_text) = std::string(buf);
+        - lvgl.label.update:
+            id: power_label
+            text: !lambda 'return id(power_label_text);'
         - script.execute: update_selection_highlight
 
 # Steam level (using text_sensor for select entity)
@@ -372,26 +390,7 @@ text_sensor:
             text: !lambda 'return id(prebrew_label_text);'
         - script.execute: update_selection_highlight
 
-  # PreInfusion time
-  - platform: homeassistant
-    id: lm_preinfusion_time_sensor
-    entity_id: ${lm_preinfusion_time}
-    attribute: native_value
-    unit_of_measurement: "s"
-    accuracy_decimals: 1
-    on_value:
-      then:
-        - lambda: |-
-            char buf[32];
-            snprintf(buf, sizeof(buf), "PreInf: %.1fs", x);
-            id(preinfusion_label_text) = std::string(buf);
-        - lvgl.label.update:
-            id: preinfusion_label
-            text: !lambda 'return id(preinfusion_label_text);'
-        - script.execute: update_selection_highlight
-
-  # Machine status (for brewing start time) - using text_sensor
-text_sensor:
+  # Machine status (for brewing start time)
   - platform: homeassistant
     id: lm_status_sensor
     entity_id: ${lm_status}
