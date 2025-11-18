@@ -91,6 +91,16 @@ globals:
     type: float
     restore_value: false
     initial_value: '7.3'
+  
+  # Working values for encoder adjustments (accumulate changes locally)
+  - id: working_temp_value
+    type: float
+    restore_value: false
+    initial_value: '89.0'
+  - id: working_preinfusion_value
+    type: float
+    restore_value: false
+    initial_value: '7.3'
     
   - id: handle_power_toggle
     type: bool
@@ -116,6 +126,28 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  
+  # Verification tracking
+  - id: verifying_element
+    type: int
+    restore_value: false
+    initial_value: '-1'  # -1 = not verifying, 0-5 = element index
+  - id: sent_temp_value
+    type: float
+    restore_value: false
+    initial_value: '0.0'
+  - id: sent_preinfusion_value
+    type: float
+    restore_value: false
+    initial_value: '0.0'
+  - id: sent_steam_value
+    type: std::string
+    restore_value: false
+    #initial_value: ""
+  - id: sent_prebrew_value
+    type: std::string
+    restore_value: false
+    #initial_value: ""
     
   - id: power_label_text
     type: std::string
@@ -494,6 +526,14 @@ script:
           auto now = id(time_comp).now();
           id(selection_timeout) = now.timestamp + 3;
           ESP_LOGD("ui", "Selected element %d", element);
+          // Initialize working values from current sensor states
+          if (element == 1) {
+            // Temperature - sync working value with current sensor value
+            id(working_temp_value) = id(lm_coffee_temp_sensor).state;
+          } else if (element == 4) {
+            // Preinfusion time - sync working value with current sensor value
+            id(working_preinfusion_value) = id(lm_preinfusion_time_sensor).state;
+          }
       - script.execute: update_selection_highlight
       - script.execute: selection_timeout_timer
 
@@ -581,10 +621,10 @@ script:
             id(handle_power_toggle) = true;
             id(send_ha_command) = true;
           } else if (sel == 1) {
-            // Temperature - increase
-            float current = id(lm_coffee_temp_sensor).state;
-            float new_temp = current + 0.1f;
+            // Temperature - increase (use working value, not sensor value)
+            float new_temp = id(working_temp_value) + 0.1f;
             if (new_temp > 100.0f) new_temp = 100.0f;
+            id(working_temp_value) = new_temp;
             id(temp_new_value) = new_temp;
             // Update UI immediately
             char buf[32];
@@ -596,9 +636,9 @@ script:
             // Steam level - increase
             std::string current = id(lm_steam_level_sensor).state;
             std::string next;
-            if (current == "Level1") next = "Level2";
-            else if (current == "Level2") next = "Level3";
-            else next = "Level1";
+            if (current == "1") next = "2";
+            else if (current == "2") next = "3";
+            else next = "1";
             id(steam_new_value) = next;
             // Update UI immediately
             std::string level_num = next.length() > 5 ? next.substr(5) : next;
@@ -611,9 +651,9 @@ script:
             // Prebrew mode - cycle forward
             std::string current = id(lm_prebrew_mode_sensor).state;
             std::string next;
-            if (current == "PreBrewing") next = "PreInfusion";
-            else if (current == "PreInfusion") next = "Disabled";
-            else next = "PreBrewing";
+            if (current == "prebrew") next = "preinfusion";
+            else if (current == "preinfusion") next = "disabled";
+            else next = "prebrew";
             id(prebrew_new_value) = next;
             // Update UI immediately
             char buf[32];
@@ -622,10 +662,10 @@ script:
             id(handle_prebrew_change) = true;
             id(send_ha_command) = true;
           } else if (sel == 4) {
-            // Preinfusion time - increase
-            float current = id(lm_preinfusion_time_sensor).state;
-            float new_time = current + 0.1f;
+            // Preinfusion time - increase (use working value, not sensor value)
+            float new_time = id(working_preinfusion_value) + 0.1f;
             if (new_time > 25.0f) new_time = 25.0f;
+            id(working_preinfusion_value) = new_time;
             id(preinfusion_new_value) = new_time;
             // Update UI immediately
             char buf[32];
@@ -667,10 +707,10 @@ script:
             id(handle_power_toggle) = true;
             id(send_ha_command) = true;
           } else if (sel == 1) {
-            // Temperature - decrease
-            float current = id(lm_coffee_temp_sensor).state;
-            float new_temp = current - 0.1f;
+            // Temperature - decrease (use working value, not sensor value)
+            float new_temp = id(working_temp_value) - 0.1f;
             if (new_temp < 80.0f) new_temp = 80.0f;
+            id(working_temp_value) = new_temp;
             id(temp_new_value) = new_temp;
             // Update UI immediately
             char buf[32];
@@ -682,9 +722,9 @@ script:
             // Steam level - decrease
             std::string current = id(lm_steam_level_sensor).state;
             std::string next;
-            if (current == "Level3") next = "Level2";
-            else if (current == "Level2") next = "Level1";
-            else next = "Level3";
+            if (current == "3") next = "2";
+            else if (current == "2") next = "1";
+            else next = "3";
             id(steam_new_value) = next;
             // Update UI immediately
             std::string level_num = next.length() > 5 ? next.substr(5) : next;
@@ -697,9 +737,9 @@ script:
             // Prebrew mode - cycle backward
             std::string current = id(lm_prebrew_mode_sensor).state;
             std::string next;
-            if (current == "Disabled") next = "PreInfusion";
-            else if (current == "PreInfusion") next = "PreBrewing";
-            else next = "Disabled";
+            if (current == "disabled") next = "preinfusion";
+            else if (current == "preinfusion") next = "prebrew";
+            else next = "disabled";
             id(prebrew_new_value) = next;
             // Update UI immediately
             char buf[32];
@@ -708,10 +748,10 @@ script:
             id(handle_prebrew_change) = true;
             id(send_ha_command) = true;
           } else if (sel == 4) {
-            // Preinfusion time - decrease
-            float current = id(lm_preinfusion_time_sensor).state;
-            float new_time = current - 0.1f;
+            // Preinfusion time - decrease (use working value, not sensor value)
+            float new_time = id(working_preinfusion_value) - 0.1f;
             if (new_time < 1.0f) new_time = 1.0f;
+            id(working_preinfusion_value) = new_time;
             id(preinfusion_new_value) = new_time;
             // Update UI immediately
             char buf[32];
@@ -740,15 +780,18 @@ script:
   - id: send_ha_command_delayed
     mode: restart
     then:
-      - delay: 300ms  # Wait 300ms after last encoder movement
+      - delay: 500ms  # Wait 500ms after last encoder movement before sending to HA
       - lambda: |-
-          // Check if flag is still set (encoder stopped turning)
+          // After delay, check if we should still send the command
+          // If send_ha_command flag is false, encoder was turned again (script restarted)
+          // and we should not send this command
           if (!id(send_ha_command)) {
-            // Flag was cleared, don't send command
+            ESP_LOGD("encoder", "Command cancelled - encoder still turning");
             return;
           }
-          // Clear flag before sending (prevents duplicate sends)
+          // Clear flag to prevent duplicate sends
           id(send_ha_command) = false;
+          ESP_LOGD("encoder", "Sending delayed command to Home Assistant");
       - if:
           condition:
             lambda: 'return id(handle_power_toggle);'
@@ -762,42 +805,70 @@ script:
           condition:
             lambda: 'return id(handle_temp_change);'
           then:
-            - lambda: 'id(handle_temp_change) = false;'
+            - lambda: |-
+                id(handle_temp_change) = false;
+                id(sent_temp_value) = id(temp_new_value);
+                id(verifying_element) = 1;  // Temperature element
             - homeassistant.action:
                 action: number.set_value
                 data:
                   entity_id: ${lm_coffee_temp}
                   value: !lambda 'return id(temp_new_value);'
+            - script.execute: verify_ha_update
       - if:
           condition:
             lambda: 'return id(handle_steam_change);'
           then:
-            - lambda: 'id(handle_steam_change) = false;'
+            - lambda: |-
+                id(handle_steam_change) = false;
+                id(sent_steam_value) = id(steam_new_value);
+                id(verifying_element) = 2;  // Steam element
             - homeassistant.action:
                 action: select.select_option
                 data:
                   entity_id: ${lm_steam_level}
                   option: !lambda 'return id(steam_new_value);'
+            - script.execute: verify_ha_update
       - if:
           condition:
             lambda: 'return id(handle_prebrew_change);'
           then:
-            - lambda: 'id(handle_prebrew_change) = false;'
+            - lambda: |-
+                id(handle_prebrew_change) = false;
+                id(sent_prebrew_value) = id(prebrew_new_value);
+                id(verifying_element) = 3;  // Prebrew element
             - homeassistant.action:
                 action: select.select_option
                 data:
                   entity_id: ${lm_prebrew_mode}
                   option: !lambda 'return id(prebrew_new_value);'
+            - script.execute: verify_ha_update
       - if:
           condition:
             lambda: 'return id(handle_preinfusion_change);'
           then:
-            - lambda: 'id(handle_preinfusion_change) = false;'
+            - lambda: |-
+                id(handle_preinfusion_change) = false;
+                id(sent_preinfusion_value) = id(preinfusion_new_value);
+                id(verifying_element) = 4;  // Preinfusion element
             - homeassistant.action:
                 action: number.set_value
                 data:
                   entity_id: ${lm_preinfusion_time}
                   value: !lambda 'return id(preinfusion_new_value);'
+            - script.execute: verify_ha_update
+      - if:
+          condition:
+            lambda: 'return id(handle_power_toggle);'
+          then:
+            - lambda: |-
+                id(handle_power_toggle) = false;
+                id(verifying_element) = 0;  // Power element
+            - homeassistant.action:
+                action: switch.toggle
+                data:
+                  entity_id: ${lm_power}
+            - script.execute: verify_ha_update
 
   # Initialize UI values from Home Assistant on boot
   - id: initialize_ui_values
