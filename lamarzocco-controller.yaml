@@ -116,6 +116,55 @@ globals:
     type: std::string
     restore_value: false
     initial_value: "Brewing: --.-s"
+    
+  - id: power_bg_color
+    type: int
+    restore_value: false
+    initial_value: '0xE0E0E0'
+  - id: power_border_color
+    type: int
+    restore_value: false
+    initial_value: '0x000000'
+  - id: temp_bg_color
+    type: int
+    restore_value: false
+    initial_value: '0xE0E0E0'
+  - id: temp_border_color
+    type: int
+    restore_value: false
+    initial_value: '0x000000'
+  - id: steam_bg_color
+    type: int
+    restore_value: false
+    initial_value: '0xE0E0E0'
+  - id: steam_border_color
+    type: int
+    restore_value: false
+    initial_value: '0x000000'
+  - id: prebrew_bg_color
+    type: int
+    restore_value: false
+    initial_value: '0xE0E0E0'
+  - id: prebrew_border_color
+    type: int
+    restore_value: false
+    initial_value: '0x000000'
+  - id: preinfusion_bg_color
+    type: int
+    restore_value: false
+    initial_value: '0xE0E0E0'
+  - id: preinfusion_border_color
+    type: int
+    restore_value: false
+    initial_value: '0x000000'
+  - id: brewing_bg_color
+    type: int
+    restore_value: false
+    initial_value: '0xE0E0E0'
+  - id: brewing_border_color
+    type: int
+    restore_value: false
+    initial_value: '0x000000'
 
 # LVGL Configuration
 lvgl:
@@ -181,7 +230,7 @@ lvgl:
             widgets:
               - label:
                   id: temp_label
-                  text: "Temp: --.-°C"
+                  text: "Temp: --.-C"
                   text_font: roboto
                   text_color: 0x000000
                   align: CENTER
@@ -432,32 +481,50 @@ script:
   - id: update_selection_highlight
     then:
       - lambda: |-
-          // Store selection for use in actions
           int sel = id(selected_element);
+          // Set colors for each container based on selection
+          // Power container
+          id(power_bg_color) = (sel == 0) ? 0x00BFFF : 0xE0E0E0;
+          id(power_border_color) = (sel == 0) ? 0x0000FF : 0x000000;
+          // Temp container
+          id(temp_bg_color) = (sel == 1) ? 0x00BFFF : 0xE0E0E0;
+          id(temp_border_color) = (sel == 1) ? 0x0000FF : 0x000000;
+          // Steam container
+          id(steam_bg_color) = (sel == 2) ? 0x00BFFF : 0xE0E0E0;
+          id(steam_border_color) = (sel == 2) ? 0x0000FF : 0x000000;
+          // Prebrew container
+          id(prebrew_bg_color) = (sel == 3) ? 0x00BFFF : 0xE0E0E0;
+          id(prebrew_border_color) = (sel == 3) ? 0x0000FF : 0x000000;
+          // Preinfusion container
+          id(preinfusion_bg_color) = (sel == 4) ? 0x00BFFF : 0xE0E0E0;
+          id(preinfusion_border_color) = (sel == 4) ? 0x0000FF : 0x000000;
+          // Brewing container
+          id(brewing_bg_color) = (sel == 5) ? 0x00BFFF : 0xE0E0E0;
+          id(brewing_border_color) = (sel == 5) ? 0x0000FF : 0x000000;
       - lvgl.obj.update:
           id: power_container
-          bg_color: !lambda 'return id(selected_element) == 0 ? 0x00BFFF : 0xE0E0E0;'
-          border_color: !lambda 'return id(selected_element) == 0 ? 0x0000FF : 0x000000;'
+          bg_color: !lambda 'return (lv_color_t)id(power_bg_color);'
+          border_color: !lambda 'return (lv_color_t)id(power_border_color);'
       - lvgl.obj.update:
           id: temp_container
-          bg_color: !lambda 'return id(selected_element) == 1 ? 0x00BFFF : 0xE0E0E0;'
-          border_color: !lambda 'return id(selected_element) == 1 ? 0x0000FF : 0x000000;'
+          bg_color: !lambda 'return (lv_color_t)id(temp_bg_color);'
+          border_color: !lambda 'return (lv_color_t)id(temp_border_color);'
       - lvgl.obj.update:
           id: steam_container
-          bg_color: !lambda 'return id(selected_element) == 2 ? 0x00BFFF : 0xE0E0E0;'
-          border_color: !lambda 'return id(selected_element) == 2 ? 0x0000FF : 0x000000;'
+          bg_color: !lambda 'return (lv_color_t)id(steam_bg_color);'
+          border_color: !lambda 'return (lv_color_t)id(steam_border_color);'
       - lvgl.obj.update:
           id: prebrew_container
-          bg_color: !lambda 'return id(selected_element) == 3 ? 0x00BFFF : 0xE0E0E0;'
-          border_color: !lambda 'return id(selected_element) == 3 ? 0x0000FF : 0x000000;'
+          bg_color: !lambda 'return (lv_color_t)id(prebrew_bg_color);'
+          border_color: !lambda 'return (lv_color_t)id(prebrew_border_color);'
       - lvgl.obj.update:
           id: preinfusion_container
-          bg_color: !lambda 'return id(selected_element) == 4 ? 0x00BFFF : 0xE0E0E0;'
-          border_color: !lambda 'return id(selected_element) == 4 ? 0x0000FF : 0x000000;'
+          bg_color: !lambda 'return (lv_color_t)id(preinfusion_bg_color);'
+          border_color: !lambda 'return (lv_color_t)id(preinfusion_border_color);'
       - lvgl.obj.update:
           id: brewing_container
-          bg_color: !lambda 'return id(selected_element) == 5 ? 0x00BFFF : 0xE0E0E0;'
-          border_color: !lambda 'return id(selected_element) == 5 ? 0x0000FF : 0x000000;'
+          bg_color: !lambda 'return (lv_color_t)id(brewing_bg_color);'
+          border_color: !lambda 'return (lv_color_t)id(brewing_border_color);'
 
   # Selection timeout timer
   - id: selection_timeout_timer
