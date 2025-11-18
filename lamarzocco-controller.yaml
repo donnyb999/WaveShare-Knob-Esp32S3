@@ -55,6 +55,13 @@ font:
     id: roboto_48
     size: 48
 
+image:
+  - file: "lamarzocco/lm logo.png"
+    id: lm_logo_background_image
+    type: RGB565
+    resize: 360x360
+    transparency: alpha_channel
+
 # Global variables for UI state
 globals:
   - id: selected_element
@@ -226,51 +233,51 @@ globals:
   - id: power_bg_color
     type: int
     restore_value: false
-    initial_value: '0xE0E0E0'
+    initial_value: '0x1A1A1A'
   - id: power_border_color
     type: int
     restore_value: false
-    initial_value: '0x000000'
+    initial_value: '0x333333'
   - id: temp_bg_color
     type: int
     restore_value: false
-    initial_value: '0xE0E0E0'
+    initial_value: '0x1A1A1A'
   - id: temp_border_color
     type: int
     restore_value: false
-    initial_value: '0x000000'
+    initial_value: '0x333333'
   - id: steam_bg_color
     type: int
     restore_value: false
-    initial_value: '0xE0E0E0'
+    initial_value: '0x1A1A1A'
   - id: steam_border_color
     type: int
     restore_value: false
-    initial_value: '0x000000'
+    initial_value: '0x333333'
   - id: prebrew_bg_color
     type: int
     restore_value: false
-    initial_value: '0xE0E0E0'
+    initial_value: '0x1A1A1A'
   - id: prebrew_border_color
     type: int
     restore_value: false
-    initial_value: '0x000000'
+    initial_value: '0x333333'
   - id: preinfusion_bg_color
     type: int
     restore_value: false
-    initial_value: '0xE0E0E0'
+    initial_value: '0x1A1A1A'
   - id: preinfusion_border_color
     type: int
     restore_value: false
-    initial_value: '0x000000'
+    initial_value: '0x333333'
   - id: brewing_bg_color
     type: int
     restore_value: false
-    initial_value: '0xE0E0E0'
+    initial_value: '0x1A1A1A'
   - id: brewing_border_color
     type: int
     restore_value: false
-    initial_value: '0x000000'
+    initial_value: '0x333333'
 
 # LVGL Configuration
 lvgl:
@@ -284,142 +291,170 @@ lvgl:
   pages:
     - id: lamarzocco_page
       widgets:
-        # Background
+        # Base background
         - obj:
             id: bg_container
             width: 100%
             height: 100%
-            bg_color: 0xFFFFFF
+            bg_color: 0x000000
+            bg_opa: 100%
             border_width: 0
+            radius: 0
+
+        # Logo background image
+        - image:
+            id: lm_logo_background
+            src: lm_logo_background_image
+            align: CENTER
+            width: 100%
+            height: 100%
+            recolor: 0x333333
+            recolor_opa: 80%
             
         # Title
         - label:
             id: title_label
             text: "La Marzocco Micra"
             text_font: roboto_36
-            text_color: 0x000000
+            text_color: 0xFFFFFF
             align: TOP_MID
-            y: 10
+            y: 12
             
         # 1. Power State (selectable)
         - obj:
             id: power_container
-            width: 90%
-            height: 50
-            align: TOP_LEFT
-            x: 5%
-            y: 60
-            bg_color: 0xE0E0E0
+            width: 230
+            height: 70
+            align: CENTER
+            y: -120
+            bg_color: 0x1A1A1A
+            bg_opa: 85%
             border_width: 2
-            border_color: 0x000000
-            radius: 5
+            border_color: 0x333333
+            radius: 30
+            pad_all: 6
             widgets:
               - label:
                   id: power_label
                   text: !lambda 'return id(power_label_text);'
                   text_font: roboto
-                  text_color: 0x000000
+                  text_color: 0xFFFFFF
                   align: CENTER
+                  width: 100%
                   
         # 2. Coffee Boiler Temperature (selectable)
         - obj:
             id: temp_container
-            width: 90%
-            height: 50
-            align: TOP_LEFT
-            x: 5%
-            y: 120
-            bg_color: 0xE0E0E0
+            width: 160
+            height: 70
+            align: CENTER
+            x: -120
+            y: -10
+            bg_color: 0x1A1A1A
+            bg_opa: 85%
             border_width: 2
-            border_color: 0x000000
-            radius: 5
+            border_color: 0x333333
+            radius: 30
+            pad_all: 6
             widgets:
               - label:
                   id: temp_label
                   text: !lambda 'return id(temp_label_text);'
                   text_font: roboto
-                  text_color: 0x000000
+                  text_color: 0xFFFFFF
                   align: CENTER
+                  width: 100%
                   
         # 3. Steam Power Level (selectable)
         - obj:
             id: steam_container
-            width: 90%
-            height: 50
-            align: TOP_LEFT
-            x: 5%
-            y: 180
-            bg_color: 0xE0E0E0
+            width: 160
+            height: 70
+            align: CENTER
+            x: 120
+            y: -10
+            bg_color: 0x1A1A1A
+            bg_opa: 85%
             border_width: 2
-            border_color: 0x000000
-            radius: 5
+            border_color: 0x333333
+            radius: 30
+            pad_all: 6
             widgets:
               - label:
                   id: steam_label
                   text: !lambda 'return id(steam_label_text);'
                   text_font: roboto
-                  text_color: 0x000000
+                  text_color: 0xFFFFFF
                   align: CENTER
+                  width: 100%
                   
         # 4. Prebrewing Mode (selectable)
         - obj:
             id: prebrew_container
-            width: 90%
-            height: 50
-            align: TOP_LEFT
-            x: 5%
-            y: 240
-            bg_color: 0xE0E0E0
+            width: 160
+            height: 70
+            align: CENTER
+            x: -120
+            y: 90
+            bg_color: 0x1A1A1A
+            bg_opa: 85%
             border_width: 2
-            border_color: 0x000000
-            radius: 5
+            border_color: 0x333333
+            radius: 30
+            pad_all: 6
             widgets:
               - label:
                   id: prebrew_label
                   text: !lambda 'return id(prebrew_label_text);'
                   text_font: roboto
-                  text_color: 0x000000
+                  text_color: 0xFFFFFF
                   align: CENTER
+                  width: 100%
                   
         # 5. PreInfusion Time (selectable)
         - obj:
             id: preinfusion_container
-            width: 90%
-            height: 50
-            align: TOP_LEFT
-            x: 5%
-            y: 300
-            bg_color: 0xE0E0E0
+            width: 160
+            height: 70
+            align: CENTER
+            x: 120
+            y: 90
+            bg_color: 0x1A1A1A
+            bg_opa: 85%
             border_width: 2
-            border_color: 0x000000
-            radius: 5
+            border_color: 0x333333
+            radius: 30
+            pad_all: 6
             widgets:
               - label:
                   id: preinfusion_label
                   text: !lambda 'return id(preinfusion_label_text);'
                   text_font: roboto
-                  text_color: 0x000000
+                  text_color: 0xFFFFFF
                   align: CENTER
+                  width: 100%
                   
         # 6. Brewing Duration (selectable, read-only display)
         - obj:
             id: brewing_container
-            width: 90%
-            height: 50
-            align: TOP_LEFT
-            x: 5%
-            y: 360
-            bg_color: 0xE0E0E0
+            width: 200
+            height: 70
+            align: CENTER
+            y: 135
+            bg_color: 0x1A1A1A
+            bg_opa: 85%
             border_width: 2
-            border_color: 0x000000
-            radius: 5
+            border_color: 0x333333
+            radius: 30
+            pad_all: 6
             widgets:
               - label:
                   id: brewing_label
                   text: !lambda 'return id(brewing_label_text);'
                   text_font: roboto
-                  text_color: 0x000000
+                  text_color: 0xFFFFFF
                   align: CENTER
+                  width: 100%
 
 # Rotary Encoder and Home Assistant Sensors
 sensor:
@@ -630,26 +665,29 @@ script:
   - id: update_selection_highlight
     then:
       - lambda: |-
+          const uint32_t accent_bg = 0x4CAF50;
+          const uint32_t accent_border = 0xA5FF8A;
+          const uint32_t idle_bg = 0x1A1A1A;
+          const uint32_t idle_border = 0x333333;
           int sel = id(selected_element);
-          // Set colors for each container based on selection
           // Power container
-          id(power_bg_color) = (sel == 0) ? 0x00BFFF : 0xE0E0E0;
-          id(power_border_color) = (sel == 0) ? 0x0000FF : 0x000000;
+          id(power_bg_color) = (sel == 0) ? accent_bg : idle_bg;
+          id(power_border_color) = (sel == 0) ? accent_border : idle_border;
           // Temp container
-          id(temp_bg_color) = (sel == 1) ? 0x00BFFF : 0xE0E0E0;
-          id(temp_border_color) = (sel == 1) ? 0x0000FF : 0x000000;
+          id(temp_bg_color) = (sel == 1) ? accent_bg : idle_bg;
+          id(temp_border_color) = (sel == 1) ? accent_border : idle_border;
           // Steam container
-          id(steam_bg_color) = (sel == 2) ? 0x00BFFF : 0xE0E0E0;
-          id(steam_border_color) = (sel == 2) ? 0x0000FF : 0x000000;
+          id(steam_bg_color) = (sel == 2) ? accent_bg : idle_bg;
+          id(steam_border_color) = (sel == 2) ? accent_border : idle_border;
           // Prebrew container
-          id(prebrew_bg_color) = (sel == 3) ? 0x00BFFF : 0xE0E0E0;
-          id(prebrew_border_color) = (sel == 3) ? 0x0000FF : 0x000000;
+          id(prebrew_bg_color) = (sel == 3) ? accent_bg : idle_bg;
+          id(prebrew_border_color) = (sel == 3) ? accent_border : idle_border;
           // Preinfusion container
-          id(preinfusion_bg_color) = (sel == 4) ? 0x00BFFF : 0xE0E0E0;
-          id(preinfusion_border_color) = (sel == 4) ? 0x0000FF : 0x000000;
+          id(preinfusion_bg_color) = (sel == 4) ? accent_bg : idle_bg;
+          id(preinfusion_border_color) = (sel == 4) ? accent_border : idle_border;
           // Brewing container
-          id(brewing_bg_color) = (sel == 5) ? 0x00BFFF : 0xE0E0E0;
-          id(brewing_border_color) = (sel == 5) ? 0x0000FF : 0x000000;
+          id(brewing_bg_color) = (sel == 5) ? accent_bg : idle_bg;
+          id(brewing_border_color) = (sel == 5) ? accent_border : idle_border;
       - lvgl.obj.update:
           id: power_container
           bg_color: !lambda 'return lv_color_hex(id(power_bg_color));'
