@@ -634,7 +634,7 @@ script:
             id(handle_preinfusion_change) = true;
             id(send_ha_command) = true;
           }
-      // Update UI labels immediately
+        # Update UI labels immediately
       - lvgl.label.update:
           id: temp_label
           text: !lambda 'return id(temp_label_text);'
@@ -647,7 +647,7 @@ script:
       - lvgl.label.update:
           id: preinfusion_label
           text: !lambda 'return id(preinfusion_label_text);'
-      // Start/restart delayed HA command script
+      # Start/restart delayed HA command script
       - script.execute: send_ha_command_delayed
 
   # Handle encoder counter-clockwise
@@ -720,7 +720,7 @@ script:
             id(handle_preinfusion_change) = true;
             id(send_ha_command) = true;
           }
-      // Update UI labels immediately
+      # Update UI labels immediately
       - lvgl.label.update:
           id: temp_label
           text: !lambda 'return id(temp_label_text);'
@@ -733,7 +733,7 @@ script:
       - lvgl.label.update:
           id: preinfusion_label
           text: !lambda 'return id(preinfusion_label_text);'
-      // Start/restart delayed HA command script
+      # Start/restart delayed HA command script
       - script.execute: send_ha_command_delayed
 
   # Delayed Home Assistant command sender (restart mode - resets delay if encoder keeps turning)
