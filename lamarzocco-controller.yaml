@@ -10,10 +10,14 @@ substitutions:
   lm_status: "binary_sensor.micra_brewing_active"  # Update if different
   lm_brewing_start: "sensor.micra_brewing_start_time"  # Update if different
 
+#packages:
+#  esp_settings: !include lamarzocco/esp-config.yaml
+#  ha_settings: !include lamarzocco/ha-config.yaml
+#  display: !include lamarzocco/waveshare.yaml
 packages:
-  esp_settings: !include lamarzocco/esp-config.yaml
-  ha_settings: !include lamarzocco/ha-config.yaml
-  display: !include lamarzocco/waveshare.yaml
+  remote_package_files:
+    url: https://github.com/donnyb999/WaveShare-Knob-Esp32S3
+    files: [lamarzocco/waveshare.yaml,lamarzocco/esp-config.yaml,lamarzocco/ha-config.yaml] 
 #  lvgl: !include lamarzocco/lvgl.yaml
 
 # External component for ST77916 display
