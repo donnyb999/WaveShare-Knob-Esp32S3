@@ -92,7 +92,7 @@ globals:
   - id: temp_label_text
     type: std::string
     restore_value: false
-    initial_value: "Temp: --.-°C"
+    initial_value: "Temp: --.-C"
     
   - id: steam_label_text
     type: std::string
@@ -207,7 +207,7 @@ lvgl:
             widgets:
               - label:
                   id: power_label
-                  text: "Power: OFF"
+                  text: !lambda 'return id(power_label_text);'
                   text_font: roboto
                   text_color: 0x000000
                   align: CENTER
@@ -227,7 +227,7 @@ lvgl:
             widgets:
               - label:
                   id: temp_label
-                  text: "Temp: --.-C"
+                  text: !lambda 'return id(temp_label_text);'
                   text_font: roboto
                   text_color: 0x000000
                   align: CENTER
@@ -247,7 +247,7 @@ lvgl:
             widgets:
               - label:
                   id: steam_label
-                  text: "Steam: --"
+                  text: !lambda 'return id(steam_label_text);'
                   text_font: roboto
                   text_color: 0x000000
                   align: CENTER
@@ -267,7 +267,7 @@ lvgl:
             widgets:
               - label:
                   id: prebrew_label
-                  text: "PreBrew: --"
+                  text: !lambda 'return id(prebrew_label_text);'
                   text_font: roboto
                   text_color: 0x000000
                   align: CENTER
@@ -287,7 +287,7 @@ lvgl:
             widgets:
               - label:
                   id: preinfusion_label
-                  text: "PreInf: --.-s"
+                  text: !lambda 'return id(preinfusion_label_text);'
                   text_font: roboto
                   text_color: 0x000000
                   align: CENTER
@@ -307,7 +307,7 @@ lvgl:
             widgets:
               - label:
                   id: brewing_label
-                  text: "Brewing: --.-s"
+                  text: !lambda 'return id(brewing_label_text);'
                   text_font: roboto
                   text_color: 0x000000
                   align: CENTER
@@ -352,13 +352,13 @@ sensor:
     id: lm_coffee_temp_sensor
     entity_id: ${lm_coffee_temp}
     attribute: native_value
-    unit_of_measurement: "°C"
+    unit_of_measurement: "C"
     accuracy_decimals: 1
     on_value:
       then:
         - lambda: |-
             char buf[32];
-            snprintf(buf, sizeof(buf), "Temp: %.1f°C", x);
+            snprintf(buf, sizeof(buf), "Temp: %.1fC", x);
             id(temp_label_text) = std::string(buf);
         - lvgl.label.update:
             id: temp_label
