@@ -86,6 +86,36 @@ globals:
     type: float
     restore_value: false
     initial_value: '7.3'
+    
+  - id: power_label_text
+    type: std::string
+    restore_value: false
+    initial_value: "Power: OFF"
+    
+  - id: temp_label_text
+    type: std::string
+    restore_value: false
+    initial_value: "Temp: --.-°C"
+    
+  - id: steam_label_text
+    type: std::string
+    restore_value: false
+    initial_value: "Steam: --"
+    
+  - id: prebrew_label_text
+    type: std::string
+    restore_value: false
+    initial_value: "PreBrew: --"
+    
+  - id: preinfusion_label_text
+    type: std::string
+    restore_value: false
+    initial_value: "PreInf: --.-s"
+    
+  - id: brewing_label_text
+    type: std::string
+    restore_value: false
+    initial_value: "Brewing: --.-s"
 
 # LVGL Configuration
 lvgl:
@@ -252,31 +282,43 @@ sensor:
         - lambda: |-
             if (id(selected_element) >= 0) {
               id(rotary_encoder).set_value(0);  // Reset encoder
-              script.execute: handle_encoder_cw;
             }
+        - if:
+            condition:
+              lambda: 'return id(selected_element) >= 0;'
+            then:
+              - script.execute: handle_encoder_cw
     on_anticlockwise:
       then:
         - lambda: |-
             if (id(selected_element) >= 0) {
               id(rotary_encoder).set_value(0);  // Reset encoder
-              script.execute: handle_encoder_ccw;
             }
+        - if:
+            condition:
+              lambda: 'return id(selected_element) >= 0;'
+            then:
+              - script.execute: handle_encoder_ccw
 
 # Home Assistant Sensors - Reading machine state
-  # Power state
+binary_sensor:
+  # Power state (using binary_sensor for switch)
   - platform: homeassistant
     id: lm_power_state
     entity_id: ${lm_power}
-    attribute: state
-    on_value:
+    on_state:
       then:
         - lambda: |-
-            std::string state_str = (x == "on" || x == "ON") ? "ON" : "OFF";
+            std::string state_str = x ? "ON" : "OFF";
             char buf[32];
             snprintf(buf, sizeof(buf), "Power: %s", state_str.c_str());
-            id(power_label).update_text(std::string(buf));
-            script.execute: update_selection_highlight;
+            id(power_label_text) = std::string(buf);
+        - lvgl.label.update:
+            id: power_label
+            text: !lambda 'return id(power_label_text);'
+        - script.execute: update_selection_highlight
 
+sensor:
   # Coffee boiler temperature
   - platform: homeassistant
     id: lm_coffee_temp_sensor
@@ -289,10 +331,14 @@ sensor:
         - lambda: |-
             char buf[32];
             snprintf(buf, sizeof(buf), "Temp: %.1f°C", x);
-            id(temp_label).update_text(std::string(buf));
-            script.execute: update_selection_highlight;
+            id(temp_label_text) = std::string(buf);
+        - lvgl.label.update:
+            id: temp_label
+            text: !lambda 'return id(temp_label_text);'
+        - script.execute: update_selection_highlight
 
-  # Steam level
+# Steam level (using text_sensor for select entity)
+text_sensor:
   - platform: homeassistant
     id: lm_steam_level_sensor
     entity_id: ${lm_steam_level}
@@ -305,10 +351,12 @@ sensor:
             std::string level_num = level.length() > 5 ? level.substr(5) : level;
             char buf[32];
             snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
-            id(steam_label).update_text(std::string(buf));
-            script.execute: update_selection_highlight;
+            id(steam_label_text) = std::string(buf);
+        - lvgl.label.update:
+            id: steam_label
+            text: !lambda 'return id(steam_label_text);'
+        - script.execute: update_selection_highlight
 
-  # Prebrewing mode
   - platform: homeassistant
     id: lm_prebrew_mode_sensor
     entity_id: ${lm_prebrew_mode}
@@ -318,8 +366,11 @@ sensor:
         - lambda: |-
             char buf[32];
             snprintf(buf, sizeof(buf), "PreBrew: %s", x.c_str());
-            id(prebrew_label).update_text(std::string(buf));
-            script.execute: update_selection_highlight;
+            id(prebrew_label_text) = std::string(buf);
+        - lvgl.label.update:
+            id: prebrew_label
+            text: !lambda 'return id(prebrew_label_text);'
+        - script.execute: update_selection_highlight
 
   # PreInfusion time
   - platform: homeassistant
@@ -333,10 +384,14 @@ sensor:
         - lambda: |-
             char buf[32];
             snprintf(buf, sizeof(buf), "PreInf: %.1fs", x);
-            id(preinfusion_label).update_text(std::string(buf));
-            script.execute: update_selection_highlight;
+            id(preinfusion_label_text) = std::string(buf);
+        - lvgl.label.update:
+            id: preinfusion_label
+            text: !lambda 'return id(preinfusion_label_text);'
+        - script.execute: update_selection_highlight
 
-  # Machine status (for brewing start time)
+  # Machine status (for brewing start time) - using text_sensor
+text_sensor:
   - platform: homeassistant
     id: lm_status_sensor
     entity_id: ${lm_status}
@@ -378,41 +433,32 @@ script:
   - id: update_selection_highlight
     then:
       - lambda: |-
-          // Reset all containers to default
-          id(power_container).set_bg_color(0xE0E0E0);
-          id(power_container).set_border_color(0x000000);
-          id(temp_container).set_bg_color(0xE0E0E0);
-          id(temp_container).set_border_color(0x000000);
-          id(steam_container).set_bg_color(0xE0E0E0);
-          id(steam_container).set_border_color(0x000000);
-          id(prebrew_container).set_bg_color(0xE0E0E0);
-          id(prebrew_container).set_border_color(0x000000);
-          id(preinfusion_container).set_bg_color(0xE0E0E0);
-          id(preinfusion_container).set_border_color(0x000000);
-          id(brewing_container).set_bg_color(0xE0E0E0);
-          id(brewing_container).set_border_color(0x000000);
-          
-          // Highlight selected element
+          // Store selection for use in actions
           int sel = id(selected_element);
-          if (sel == 0) {
-            id(power_container).set_bg_color(0x00BFFF);
-            id(power_container).set_border_color(0x0000FF);
-          } else if (sel == 1) {
-            id(temp_container).set_bg_color(0x00BFFF);
-            id(temp_container).set_border_color(0x0000FF);
-          } else if (sel == 2) {
-            id(steam_container).set_bg_color(0x00BFFF);
-            id(steam_container).set_border_color(0x0000FF);
-          } else if (sel == 3) {
-            id(prebrew_container).set_bg_color(0x00BFFF);
-            id(prebrew_container).set_border_color(0x0000FF);
-          } else if (sel == 4) {
-            id(preinfusion_container).set_bg_color(0x00BFFF);
-            id(preinfusion_container).set_border_color(0x0000FF);
-          } else if (sel == 5) {
-            id(brewing_container).set_bg_color(0x00BFFF);
-            id(brewing_container).set_border_color(0x0000FF);
-          }
+      - lvgl.obj.update:
+          id: power_container
+          bg_color: !lambda 'return id(selected_element) == 0 ? 0x00BFFF : 0xE0E0E0;'
+          border_color: !lambda 'return id(selected_element) == 0 ? 0x0000FF : 0x000000;'
+      - lvgl.obj.update:
+          id: temp_container
+          bg_color: !lambda 'return id(selected_element) == 1 ? 0x00BFFF : 0xE0E0E0;'
+          border_color: !lambda 'return id(selected_element) == 1 ? 0x0000FF : 0x000000;'
+      - lvgl.obj.update:
+          id: steam_container
+          bg_color: !lambda 'return id(selected_element) == 2 ? 0x00BFFF : 0xE0E0E0;'
+          border_color: !lambda 'return id(selected_element) == 2 ? 0x0000FF : 0x000000;'
+      - lvgl.obj.update:
+          id: prebrew_container
+          bg_color: !lambda 'return id(selected_element) == 3 ? 0x00BFFF : 0xE0E0E0;'
+          border_color: !lambda 'return id(selected_element) == 3 ? 0x0000FF : 0x000000;'
+      - lvgl.obj.update:
+          id: preinfusion_container
+          bg_color: !lambda 'return id(selected_element) == 4 ? 0x00BFFF : 0xE0E0E0;'
+          border_color: !lambda 'return id(selected_element) == 4 ? 0x0000FF : 0x000000;'
+      - lvgl.obj.update:
+          id: brewing_container
+          bg_color: !lambda 'return id(selected_element) == 5 ? 0x00BFFF : 0xE0E0E0;'
+          border_color: !lambda 'return id(selected_element) == 5 ? 0x0000FF : 0x000000;'
 
   # Selection timeout timer
   - id: selection_timeout_timer
@@ -424,9 +470,13 @@ script:
           auto now = id(time_comp).now();
           if (id(selected_element) >= 0 && now.timestamp >= id(selection_timeout)) {
             id(selected_element) = -1;
-            script.execute: update_selection_highlight;
             ESP_LOGD("ui", "Selection timeout");
           }
+      - if:
+          condition:
+            lambda: 'return id(selected_element) < 0;'
+          then:
+            - script.execute: update_selection_highlight
 
   # Handle encoder clockwise
   - id: handle_encoder_cw
@@ -599,19 +649,21 @@ script:
           std::string start_time_str = id(lm_status_sensor).state;
           if (start_time_str.empty() || start_time_str == "null" || start_time_str == "unknown" || start_time_str == "None") {
             id(brewing_duration) = 0.0f;
-            id(brewing_label).update_text("Brewing: --.-s");
-            return;
+            id(brewing_label_text) = "Brewing: --.-s";
+          } else {
+            // Increment brewing duration by 0.1s each second
+            // Note: This is a simplified approach. For accurate timing, you'd need to parse
+            // the ISO 8601 timestamp and calculate the actual difference
+            float duration = id(brewing_duration) + 0.1f;
+            
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Brewing: %.1fs", duration);
+            id(brewing_label_text) = std::string(buf);
+            id(brewing_duration) = duration;
           }
-          
-          // Increment brewing duration by 0.1s each second
-          // Note: This is a simplified approach. For accurate timing, you'd need to parse
-          // the ISO 8601 timestamp and calculate the actual difference
-          float duration = id(brewing_duration) + 0.1f;
-          
-          char buf[32];
-          snprintf(buf, sizeof(buf), "Brewing: %.1fs", duration);
-          id(brewing_label).update_text(std::string(buf));
-          id(brewing_duration) = duration;
+      - lvgl.label.update:
+          id: brewing_label
+          text: !lambda 'return id(brewing_label_text);'
 
 # Touch screen handlers are in waveshare.yaml, but we add element selection here
 # We'll use a lambda in the touchscreen on_touch to call our script
