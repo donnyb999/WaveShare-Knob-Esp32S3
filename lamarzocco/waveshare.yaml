@@ -52,17 +52,15 @@ touchscreen:
             state: ON
         - script.execute: screentime
         - lambda: |-
-            // Determine which element was touched based on Y coordinate
-            // Element positions: 60, 120, 180, 240, 300, 360 (y positions)
             int y = touch.y;
             int element = -1;
             
-            if (y >= 60 && y < 110) element = 0;  // Power
-            else if (y >= 120 && y < 170) element = 1;  // Temperature
-            else if (y >= 180 && y < 230) element = 2;  // Steam
-            else if (y >= 240 && y < 290) element = 3;  // PreBrew
-            else if (y >= 300 && y < 350) element = 4;  // PreInfusion
-            else if (y >= 360 && y < 410) element = 5;  // Brewing
+            if (y >= 60 && y < 110) element = 0;
+            else if (y >= 120 && y < 170) element = 1;
+            else if (y >= 180 && y < 230) element = 2;
+            else if (y >= 240 && y < 290) element = 3;
+            else if (y >= 300 && y < 350) element = 4;
+            else if (y >= 360 && y < 410) element = 5;
             
             if (element >= 0) {
               id(select_element).execute(element);
