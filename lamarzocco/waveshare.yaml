@@ -11,6 +11,12 @@ esphome:
                 brightness: 50%
             - script.execute: screentime
 
+external_components:
+  - source:
+      type: git
+      url: https://github.com/donnyb999/WaveShare-Knob-Esp32S3/
+    components: [rotary_encoder_custom]
+
 display:
   - platform: mipi_spi
     id: main_display

@@ -24,7 +24,7 @@ packages:
 external_components:
   - source:
       type: git
-      url: https://github.com/KrX3D/WaveShare-Knob-Esp32S3
+      url: https://github.com/donnyb999/WaveShare-Knob-Esp32S3
       ref: main
     refresh: always
     
