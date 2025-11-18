@@ -10,11 +10,8 @@ substitutions:
   lm_status: "binary_sensor.micra_brewing_active"  # Update if different
   lm_brewing_start: "sensor.micra_brewing_start_time"  # Update if different
 
-#packages:
-#  esp_settings: !include lamarzocco/esp-config.yaml
-#  ha_settings: !include lamarzocco/ha-config.yaml
-#  display: !include lamarzocco/waveshare.yaml
 packages:
+#remote package files are necessary - DO NOT REMOVE
   remote_package_files:
     url: https://github.com/donnyb999/WaveShare-Knob-Esp32S3
     files: [lamarzocco/waveshare.yaml,lamarzocco/esp-config.yaml,lamarzocco/ha-config.yaml] 
@@ -503,28 +500,28 @@ script:
           id(brewing_border_color) = (sel == 5) ? 0x0000FF : 0x000000;
       - lvgl.obj.update:
           id: power_container
-          bg_color: !lambda 'return (lv_color_t)id(power_bg_color);'
-          border_color: !lambda 'return (lv_color_t)id(power_border_color);'
+          bg_color: !lambda 'return lv_color_hex(id(power_bg_color));'
+          border_color: !lambda 'return lv_color_hex(id(power_border_color));'
       - lvgl.obj.update:
           id: temp_container
-          bg_color: !lambda 'return (lv_color_t)id(temp_bg_color);'
-          border_color: !lambda 'return (lv_color_t)id(temp_border_color);'
+          bg_color: !lambda 'return lv_color_hex(id(temp_bg_color));'
+          border_color: !lambda 'return lv_color_hex(id(temp_border_color));'
       - lvgl.obj.update:
           id: steam_container
-          bg_color: !lambda 'return (lv_color_t)id(steam_bg_color);'
-          border_color: !lambda 'return (lv_color_t)id(steam_border_color);'
+          bg_color: !lambda 'return lv_color_hex(id(steam_bg_color));'
+          border_color: !lambda 'return lv_color_hex(id(steam_border_color));'
       - lvgl.obj.update:
           id: prebrew_container
-          bg_color: !lambda 'return (lv_color_t)id(prebrew_bg_color);'
-          border_color: !lambda 'return (lv_color_t)id(prebrew_border_color);'
+          bg_color: !lambda 'return lv_color_hex(id(prebrew_bg_color));'
+          border_color: !lambda 'return lv_color_hex(id(prebrew_border_color));'
       - lvgl.obj.update:
           id: preinfusion_container
-          bg_color: !lambda 'return (lv_color_t)id(preinfusion_bg_color);'
-          border_color: !lambda 'return (lv_color_t)id(preinfusion_border_color);'
+          bg_color: !lambda 'return lv_color_hex(id(preinfusion_bg_color));'
+          border_color: !lambda 'return lv_color_hex(id(preinfusion_border_color));'
       - lvgl.obj.update:
           id: brewing_container
-          bg_color: !lambda 'return (lv_color_t)id(brewing_bg_color);'
-          border_color: !lambda 'return (lv_color_t)id(brewing_border_color);'
+          bg_color: !lambda 'return lv_color_hex(id(brewing_bg_color));'
+          border_color: !lambda 'return lv_color_hex(id(brewing_border_color));'
 
   # Selection timeout timer
   - id: selection_timeout_timer
