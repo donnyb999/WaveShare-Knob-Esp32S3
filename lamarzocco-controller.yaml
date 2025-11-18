@@ -10,6 +10,14 @@ substitutions:
   lm_status: "binary_sensor.micra_brewing_active"  # Update if different
   lm_brewing_start: "sensor.micra_brewing_start_time"  # Update if different
 
+esphome:
+  name: lamarzocco-controller
+  on_boot:
+    priority: 200
+    then:
+      - delay: 5s  # Wait for Home Assistant connection
+      - script.execute: initialize_ui_values
+
 packages:
 #remote package files are necessary - DO NOT REMOVE
   remote_package_files:
@@ -83,6 +91,27 @@ globals:
     type: float
     restore_value: false
     initial_value: '7.3'
+    
+  - id: handle_power_toggle
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: handle_temp_change
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: handle_steam_change
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: handle_prebrew_change
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: handle_preinfusion_change
+    type: bool
+    restore_value: false
+    initial_value: 'false'
     
   - id: power_label_text
     type: std::string
@@ -326,10 +355,6 @@ sensor:
     publish_initial_value: true
     on_clockwise:
       then:
-        - lambda: |-
-            if (id(selected_element) >= 0) {
-              id(rotary_encoder).set_value(0);  // Reset encoder
-            }
         - if:
             condition:
               lambda: 'return id(selected_element) >= 0;'
@@ -337,10 +362,6 @@ sensor:
               - script.execute: handle_encoder_cw
     on_anticlockwise:
       then:
-        - lambda: |-
-            if (id(selected_element) >= 0) {
-              id(rotary_encoder).set_value(0);  // Reset encoder
-            }
         - if:
             condition:
               lambda: 'return id(selected_element) >= 0;'
@@ -351,7 +372,6 @@ sensor:
   - platform: homeassistant
     id: lm_coffee_temp_sensor
     entity_id: ${lm_coffee_temp}
-    attribute: native_value
     unit_of_measurement: "C"
     accuracy_decimals: 1
     on_value:
@@ -369,7 +389,6 @@ sensor:
   - platform: homeassistant
     id: lm_preinfusion_time_sensor
     entity_id: ${lm_preinfusion_time}
-    attribute: native_value
     unit_of_measurement: "s"
     accuracy_decimals: 1
     on_value:
@@ -406,7 +425,6 @@ text_sensor:
   - platform: homeassistant
     id: lm_steam_level_sensor
     entity_id: ${lm_steam_level}
-    attribute: state
     on_value:
       then:
         - lambda: |-
@@ -424,7 +442,6 @@ text_sensor:
   - platform: homeassistant
     id: lm_prebrew_mode_sensor
     entity_id: ${lm_prebrew_mode}
-    attribute: state
     on_value:
       then:
         - lambda: |-
@@ -548,29 +565,61 @@ script:
           int sel = id(selected_element);
           if (sel < 0) return;  // Nothing selected
           
-          // Store selection in global for use in actions
-          id(selected_element) = sel;
-          
           // Reset timeout
           auto now = id(time_comp).now();
           id(selection_timeout) = now.timestamp + 3;
+          
+          // Handle based on selected element
+          if (sel == 0) {
+            // Power - toggle
+            id(handle_power_toggle) = true;
+          } else if (sel == 1) {
+            // Temperature - increase
+            float current = id(lm_coffee_temp_sensor).state;
+            float new_temp = current + 0.1f;
+            if (new_temp > 100.0f) new_temp = 100.0f;
+            id(temp_new_value) = new_temp;
+            id(handle_temp_change) = true;
+          } else if (sel == 2) {
+            // Steam level - increase
+            std::string current = id(lm_steam_level_sensor).state;
+            std::string next;
+            if (current == "Level1") next = "Level2";
+            else if (current == "Level2") next = "Level3";
+            else next = "Level1";
+            id(steam_new_value) = next;
+            id(handle_steam_change) = true;
+          } else if (sel == 3) {
+            // Prebrew mode - cycle forward
+            std::string current = id(lm_prebrew_mode_sensor).state;
+            std::string next;
+            if (current == "PreBrewing") next = "PreInfusion";
+            else if (current == "PreInfusion") next = "Disabled";
+            else next = "PreBrewing";
+            id(prebrew_new_value) = next;
+            id(handle_prebrew_change) = true;
+          } else if (sel == 4) {
+            // Preinfusion time - increase
+            float current = id(lm_preinfusion_time_sensor).state;
+            float new_time = current + 0.1f;
+            if (new_time > 25.0f) new_time = 25.0f;
+            id(preinfusion_new_value) = new_time;
+            id(handle_preinfusion_change) = true;
+          }
       - if:
           condition:
-            lambda: 'return id(selected_element) == 0;'
+            lambda: 'return id(handle_power_toggle);'
           then:
+            - lambda: 'id(handle_power_toggle) = false;'
             - homeassistant.action:
                 action: switch.toggle
                 data:
                   entity_id: ${lm_power}
       - if:
           condition:
-            lambda: 'return id(selected_element) == 1;'
+            lambda: 'return id(handle_temp_change);'
           then:
-            - lambda: |-
-                float current = id(lm_coffee_temp_sensor).state;
-                float new_temp = current + 0.1f;
-                if (new_temp > 100.0f) new_temp = 100.0f;
-                id(temp_new_value) = new_temp;
+            - lambda: 'id(handle_temp_change) = false;'
             - homeassistant.action:
                 action: number.set_value
                 data:
@@ -578,15 +627,9 @@ script:
                   value: !lambda 'return id(temp_new_value);'
       - if:
           condition:
-            lambda: 'return id(selected_element) == 2;'
+            lambda: 'return id(handle_steam_change);'
           then:
-            - lambda: |-
-                std::string current = id(lm_steam_level_sensor).state;
-                std::string next;
-                if (current == "Level1") next = "Level2";
-                else if (current == "Level2") next = "Level3";
-                else next = "Level1";
-                id(steam_new_value) = next;
+            - lambda: 'id(handle_steam_change) = false;'
             - homeassistant.action:
                 action: select.select_option
                 data:
@@ -594,15 +637,9 @@ script:
                   option: !lambda 'return id(steam_new_value);'
       - if:
           condition:
-            lambda: 'return id(selected_element) == 3;'
+            lambda: 'return id(handle_prebrew_change);'
           then:
-            - lambda: |-
-                std::string current = id(lm_prebrew_mode_sensor).state;
-                std::string next;
-                if (current == "PreBrewing") next = "PreInfusion";
-                else if (current == "PreInfusion") next = "Disabled";
-                else next = "PreBrewing";
-                id(prebrew_new_value) = next;
+            - lambda: 'id(handle_prebrew_change) = false;'
             - homeassistant.action:
                 action: select.select_option
                 data:
@@ -610,13 +647,9 @@ script:
                   option: !lambda 'return id(prebrew_new_value);'
       - if:
           condition:
-            lambda: 'return id(selected_element) == 4;'
+            lambda: 'return id(handle_preinfusion_change);'
           then:
-            - lambda: |-
-                float current = id(lm_preinfusion_time_sensor).state;
-                float new_time = current + 0.1f;
-                if (new_time > 25.0f) new_time = 25.0f;
-                id(preinfusion_new_value) = new_time;
+            - lambda: 'id(handle_preinfusion_change) = false;'
             - homeassistant.action:
                 action: number.set_value
                 data:
@@ -630,29 +663,61 @@ script:
           int sel = id(selected_element);
           if (sel < 0) return;  // Nothing selected
           
-          // Store selection in global for use in actions
-          id(selected_element) = sel;
-          
           // Reset timeout
           auto now = id(time_comp).now();
           id(selection_timeout) = now.timestamp + 3;
+          
+          // Handle based on selected element
+          if (sel == 0) {
+            // Power - toggle
+            id(handle_power_toggle) = true;
+          } else if (sel == 1) {
+            // Temperature - decrease
+            float current = id(lm_coffee_temp_sensor).state;
+            float new_temp = current - 0.1f;
+            if (new_temp < 80.0f) new_temp = 80.0f;
+            id(temp_new_value) = new_temp;
+            id(handle_temp_change) = true;
+          } else if (sel == 2) {
+            // Steam level - decrease
+            std::string current = id(lm_steam_level_sensor).state;
+            std::string next;
+            if (current == "Level3") next = "Level2";
+            else if (current == "Level2") next = "Level1";
+            else next = "Level3";
+            id(steam_new_value) = next;
+            id(handle_steam_change) = true;
+          } else if (sel == 3) {
+            // Prebrew mode - cycle backward
+            std::string current = id(lm_prebrew_mode_sensor).state;
+            std::string next;
+            if (current == "Disabled") next = "PreInfusion";
+            else if (current == "PreInfusion") next = "PreBrewing";
+            else next = "Disabled";
+            id(prebrew_new_value) = next;
+            id(handle_prebrew_change) = true;
+          } else if (sel == 4) {
+            // Preinfusion time - decrease
+            float current = id(lm_preinfusion_time_sensor).state;
+            float new_time = current - 0.1f;
+            if (new_time < 1.0f) new_time = 1.0f;
+            id(preinfusion_new_value) = new_time;
+            id(handle_preinfusion_change) = true;
+          }
       - if:
           condition:
-            lambda: 'return id(selected_element) == 0;'
+            lambda: 'return id(handle_power_toggle);'
           then:
+            - lambda: 'id(handle_power_toggle) = false;'
             - homeassistant.action:
                 action: switch.toggle
                 data:
                   entity_id: ${lm_power}
       - if:
           condition:
-            lambda: 'return id(selected_element) == 1;'
+            lambda: 'return id(handle_temp_change);'
           then:
-            - lambda: |-
-                float current = id(lm_coffee_temp_sensor).state;
-                float new_temp = current - 0.1f;
-                if (new_temp < 80.0f) new_temp = 80.0f;
-                id(temp_new_value) = new_temp;
+            - lambda: 'id(handle_temp_change) = false;'
             - homeassistant.action:
                 action: number.set_value
                 data:
@@ -660,15 +725,9 @@ script:
                   value: !lambda 'return id(temp_new_value);'
       - if:
           condition:
-            lambda: 'return id(selected_element) == 2;'
+            lambda: 'return id(handle_steam_change);'
           then:
-            - lambda: |-
-                std::string current = id(lm_steam_level_sensor).state;
-                std::string next;
-                if (current == "Level3") next = "Level2";
-                else if (current == "Level2") next = "Level1";
-                else next = "Level3";
-                id(steam_new_value) = next;
+            - lambda: 'id(handle_steam_change) = false;'
             - homeassistant.action:
                 action: select.select_option
                 data:
@@ -676,15 +735,9 @@ script:
                   option: !lambda 'return id(steam_new_value);'
       - if:
           condition:
-            lambda: 'return id(selected_element) == 3;'
+            lambda: 'return id(handle_prebrew_change);'
           then:
-            - lambda: |-
-                std::string current = id(lm_prebrew_mode_sensor).state;
-                std::string next;
-                if (current == "Disabled") next = "PreInfusion";
-                else if (current == "PreInfusion") next = "PreBrewing";
-                else next = "Disabled";
-                id(prebrew_new_value) = next;
+            - lambda: 'id(handle_prebrew_change) = false;'
             - homeassistant.action:
                 action: select.select_option
                 data:
@@ -692,18 +745,72 @@ script:
                   option: !lambda 'return id(prebrew_new_value);'
       - if:
           condition:
-            lambda: 'return id(selected_element) == 4;'
+            lambda: 'return id(handle_preinfusion_change);'
           then:
-            - lambda: |-
-                float current = id(lm_preinfusion_time_sensor).state;
-                float new_time = current - 0.1f;
-                if (new_time < 1.0f) new_time = 1.0f;
-                id(preinfusion_new_value) = new_time;
+            - lambda: 'id(handle_preinfusion_change) = false;'
             - homeassistant.action:
                 action: number.set_value
                 data:
                   entity_id: ${lm_preinfusion_time}
                   value: !lambda 'return id(preinfusion_new_value);'
+
+  # Initialize UI values from Home Assistant on boot
+  - id: initialize_ui_values
+    then:
+      - lambda: |-
+          // Trigger sensor updates by reading their state
+          // The sensors will update the labels via their on_value handlers
+          ESP_LOGD("init", "Initializing UI values from Home Assistant");
+          // Force update by reading current state
+          float temp = id(lm_coffee_temp_sensor).state;
+          float preinf = id(lm_preinfusion_time_sensor).state;
+          bool power = id(lm_power_state).state;
+          std::string steam = id(lm_steam_level_sensor).state;
+          std::string prebrew = id(lm_prebrew_mode_sensor).state;
+          
+          // Update labels manually if sensors haven't fired yet
+          if (temp > 0) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Temp: %.1fC", temp);
+            id(temp_label_text) = std::string(buf);
+          }
+          if (preinf > 0) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreInf: %.1fs", preinf);
+            id(preinfusion_label_text) = std::string(buf);
+          }
+          {
+            std::string state_str = power ? "ON" : "OFF";
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Power: %s", state_str.c_str());
+            id(power_label_text) = std::string(buf);
+          }
+          if (!steam.empty()) {
+            std::string level_num = steam.length() > 5 ? steam.substr(5) : steam;
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
+            id(steam_label_text) = std::string(buf);
+          }
+          if (!prebrew.empty()) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreBrew: %s", prebrew.c_str());
+            id(prebrew_label_text) = std::string(buf);
+          }
+      - lvgl.label.update:
+          id: temp_label
+          text: !lambda 'return id(temp_label_text);'
+      - lvgl.label.update:
+          id: preinfusion_label
+          text: !lambda 'return id(preinfusion_label_text);'
+      - lvgl.label.update:
+          id: power_label
+          text: !lambda 'return id(power_label_text);'
+      - lvgl.label.update:
+          id: steam_label
+          text: !lambda 'return id(steam_label_text);'
+      - lvgl.label.update:
+          id: prebrew_label
+          text: !lambda 'return id(prebrew_label_text);'
 
   # Update brewing duration
   - id: update_brewing_duration
