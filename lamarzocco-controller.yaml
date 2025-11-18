@@ -1,0 +1,614 @@
+substitutions:
+  # La Marzocco entity IDs - update these to match your Home Assistant setup
+  # These are typically auto-discovered by the La Marzocco integration
+  lm_entity: "lamarzocco.micra"  # Update to your actual entity ID
+  lm_power: "switch.lamarzocco_micra_power"  # Update if different
+  lm_coffee_temp: "number.lamarzocco_micra_coffee_boiler_temperature"  # Update if different
+  lm_steam_level: "select.lamarzocco_micra_steam_boiler_level"  # Update if different
+  lm_prebrew_mode: "select.lamarzocco_micra_pre_brewing_mode"  # Update if different
+  lm_preinfusion_time: "number.lamarzocco_micra_pre_infusion_time"  # Update if different
+  lm_status: "sensor.lamarzocco_micra_status"  # Update if different
+  lm_brewing_start: "sensor.lamarzocco_micra_brewing_start_time"  # Update if different
+
+packages:
+  esp_settings: !include lamarzocco/esp-config.yaml
+  ha_settings: !include lamarzocco/ha-config.yaml
+  display: !include lamarzocco/waveshare.yaml
+  lvgl: !include lamarzocco/lvgl.yaml
+
+# External component for ST77916 display
+external_components:
+  - source:
+      type: git
+      url: https://github.com/KrX3D/WaveShare-Knob-Esp32S3
+      ref: main
+    refresh: always
+    
+  - source: github://pr#10392
+    components: [mipi_spi]
+    refresh: 1d
+
+# Font definition
+font:
+  - file: "gfonts://Roboto"
+    id: roboto_small
+    size: 16
+  - file: "gfonts://Roboto"
+    id: roboto
+    size: 20
+  - file: "gfonts://Roboto"
+    id: roboto_28
+    size: 28
+  - file: "gfonts://Roboto"
+    id: roboto_36
+    size: 36
+  - file: "gfonts://Roboto"
+    id: roboto_48
+    size: 48
+
+# Global variables for UI state
+globals:
+  - id: selected_element
+    type: int
+    restore_value: false
+    initial_value: '-1'  # -1 = nothing selected, 0-5 = element indices
+    
+  - id: selection_timeout
+    type: int
+    restore_value: false
+    initial_value: '0'  # Timestamp when selection expires
+    
+  - id: brewing_duration
+    type: float
+    restore_value: false
+    initial_value: '0.0'  # Current brewing duration in seconds
+    
+  - id: temp_new_value
+    type: float
+    restore_value: false
+    initial_value: '89.0'
+    
+  - id: steam_new_value
+    type: std::string
+    restore_value: false
+    initial_value: ""
+    
+  - id: prebrew_new_value
+    type: std::string
+    restore_value: false
+    initial_value: ""
+    
+  - id: preinfusion_new_value
+    type: float
+    restore_value: false
+    initial_value: '7.3'
+
+# LVGL Configuration
+lvgl:
+  id: my_lvgl
+  displays:
+    - main_display
+  touchscreens:
+    - my_touchscreen
+  color_depth: 16
+  
+  pages:
+    - id: lamarzocco_page
+      widgets:
+        # Background
+        - obj:
+            id: bg_container
+            width: 100%
+            height: 100%
+            bg_color: 0xFFFFFF
+            border_width: 0
+            
+        # Title
+        - label:
+            id: title_label
+            text: "La Marzocco Micra"
+            text_font: roboto_36
+            text_color: 0x000000
+            align: TOP_MID
+            y: 10
+            
+        # 1. Power State (selectable)
+        - obj:
+            id: power_container
+            width: 90%
+            height: 50
+            align: TOP_LEFT
+            x: 5%
+            y: 60
+            bg_color: 0xE0E0E0
+            border_width: 2
+            border_color: 0x000000
+            radius: 5
+            widgets:
+              - label:
+                  id: power_label
+                  text: "Power: OFF"
+                  text_font: roboto
+                  text_color: 0x000000
+                  align: CENTER
+                  
+        # 2. Coffee Boiler Temperature (selectable)
+        - obj:
+            id: temp_container
+            width: 90%
+            height: 50
+            align: TOP_LEFT
+            x: 5%
+            y: 120
+            bg_color: 0xE0E0E0
+            border_width: 2
+            border_color: 0x000000
+            radius: 5
+            widgets:
+              - label:
+                  id: temp_label
+                  text: "Temp: --.-°C"
+                  text_font: roboto
+                  text_color: 0x000000
+                  align: CENTER
+                  
+        # 3. Steam Power Level (selectable)
+        - obj:
+            id: steam_container
+            width: 90%
+            height: 50
+            align: TOP_LEFT
+            x: 5%
+            y: 180
+            bg_color: 0xE0E0E0
+            border_width: 2
+            border_color: 0x000000
+            radius: 5
+            widgets:
+              - label:
+                  id: steam_label
+                  text: "Steam: --"
+                  text_font: roboto
+                  text_color: 0x000000
+                  align: CENTER
+                  
+        # 4. Prebrewing Mode (selectable)
+        - obj:
+            id: prebrew_container
+            width: 90%
+            height: 50
+            align: TOP_LEFT
+            x: 5%
+            y: 240
+            bg_color: 0xE0E0E0
+            border_width: 2
+            border_color: 0x000000
+            radius: 5
+            widgets:
+              - label:
+                  id: prebrew_label
+                  text: "PreBrew: --"
+                  text_font: roboto
+                  text_color: 0x000000
+                  align: CENTER
+                  
+        # 5. PreInfusion Time (selectable)
+        - obj:
+            id: preinfusion_container
+            width: 90%
+            height: 50
+            align: TOP_LEFT
+            x: 5%
+            y: 300
+            bg_color: 0xE0E0E0
+            border_width: 2
+            border_color: 0x000000
+            radius: 5
+            widgets:
+              - label:
+                  id: preinfusion_label
+                  text: "PreInf: --.-s"
+                  text_font: roboto
+                  text_color: 0x000000
+                  align: CENTER
+                  
+        # 6. Brewing Duration (selectable, read-only display)
+        - obj:
+            id: brewing_container
+            width: 90%
+            height: 50
+            align: TOP_LEFT
+            x: 5%
+            y: 360
+            bg_color: 0xE0E0E0
+            border_width: 2
+            border_color: 0x000000
+            radius: 5
+            widgets:
+              - label:
+                  id: brewing_label
+                  text: "Brewing: --.-s"
+                  text_font: roboto
+                  text_color: 0x000000
+                  align: CENTER
+
+# Rotary Encoder
+sensor:
+  - platform: rotary_encoder_custom
+    name: "Rotary Encoder"
+    id: rotary_encoder
+    pin_a: 8
+    pin_b: 7
+    min_value: -10000
+    max_value: 10000
+    restore_mode: ALWAYS_ZERO
+    publish_initial_value: true
+    on_clockwise:
+      then:
+        - lambda: |-
+            if (id(selected_element) >= 0) {
+              id(rotary_encoder).set_value(0);  // Reset encoder
+              script.execute: handle_encoder_cw;
+            }
+    on_anticlockwise:
+      then:
+        - lambda: |-
+            if (id(selected_element) >= 0) {
+              id(rotary_encoder).set_value(0);  // Reset encoder
+              script.execute: handle_encoder_ccw;
+            }
+
+# Home Assistant Sensors - Reading machine state
+  # Power state
+  - platform: homeassistant
+    id: lm_power_state
+    entity_id: ${lm_power}
+    attribute: state
+    on_value:
+      then:
+        - lambda: |-
+            std::string state_str = (x == "on" || x == "ON") ? "ON" : "OFF";
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Power: %s", state_str.c_str());
+            id(power_label).update_text(std::string(buf));
+            script.execute: update_selection_highlight;
+
+  # Coffee boiler temperature
+  - platform: homeassistant
+    id: lm_coffee_temp_sensor
+    entity_id: ${lm_coffee_temp}
+    attribute: native_value
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    on_value:
+      then:
+        - lambda: |-
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Temp: %.1f°C", x);
+            id(temp_label).update_text(std::string(buf));
+            script.execute: update_selection_highlight;
+
+  # Steam level
+  - platform: homeassistant
+    id: lm_steam_level_sensor
+    entity_id: ${lm_steam_level}
+    attribute: state
+    on_value:
+      then:
+        - lambda: |-
+            std::string level = x;
+            // Extract level number from "Level1", "Level2", "Level3"
+            std::string level_num = level.length() > 5 ? level.substr(5) : level;
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
+            id(steam_label).update_text(std::string(buf));
+            script.execute: update_selection_highlight;
+
+  # Prebrewing mode
+  - platform: homeassistant
+    id: lm_prebrew_mode_sensor
+    entity_id: ${lm_prebrew_mode}
+    attribute: state
+    on_value:
+      then:
+        - lambda: |-
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreBrew: %s", x.c_str());
+            id(prebrew_label).update_text(std::string(buf));
+            script.execute: update_selection_highlight;
+
+  # PreInfusion time
+  - platform: homeassistant
+    id: lm_preinfusion_time_sensor
+    entity_id: ${lm_preinfusion_time}
+    attribute: native_value
+    unit_of_measurement: "s"
+    accuracy_decimals: 1
+    on_value:
+      then:
+        - lambda: |-
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreInf: %.1fs", x);
+            id(preinfusion_label).update_text(std::string(buf));
+            script.execute: update_selection_highlight;
+
+  # Machine status (for brewing start time)
+  - platform: homeassistant
+    id: lm_status_sensor
+    entity_id: ${lm_status}
+    attribute: brewing_start_time
+    on_value:
+      then:
+        - script.execute: update_brewing_duration
+
+# Time component for brewing duration calculation
+time:
+  - platform: sntp
+    id: time_comp
+    timezone: 'America/Winnipeg'  # Update to your timezone
+    servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+    on_time:
+      - cron: '* * * * * *'  # Every second
+        then:
+          - script.execute: update_brewing_duration
+
+# Scripts
+script:
+  # Handle touch selection
+  - id: select_element
+    parameters:
+      element: int
+    then:
+      - lambda: |-
+          id(selected_element) = element;
+          // Set timeout to 3 seconds from now
+          auto now = id(time_comp).now();
+          id(selection_timeout) = now.timestamp + 3;
+          ESP_LOGD("ui", "Selected element %d", element);
+      - script.execute: update_selection_highlight
+      - script.execute: selection_timeout_timer
+
+  # Update selection highlight
+  - id: update_selection_highlight
+    then:
+      - lambda: |-
+          // Reset all containers to default
+          id(power_container).set_bg_color(0xE0E0E0);
+          id(power_container).set_border_color(0x000000);
+          id(temp_container).set_bg_color(0xE0E0E0);
+          id(temp_container).set_border_color(0x000000);
+          id(steam_container).set_bg_color(0xE0E0E0);
+          id(steam_container).set_border_color(0x000000);
+          id(prebrew_container).set_bg_color(0xE0E0E0);
+          id(prebrew_container).set_border_color(0x000000);
+          id(preinfusion_container).set_bg_color(0xE0E0E0);
+          id(preinfusion_container).set_border_color(0x000000);
+          id(brewing_container).set_bg_color(0xE0E0E0);
+          id(brewing_container).set_border_color(0x000000);
+          
+          // Highlight selected element
+          int sel = id(selected_element);
+          if (sel == 0) {
+            id(power_container).set_bg_color(0x00BFFF);
+            id(power_container).set_border_color(0x0000FF);
+          } else if (sel == 1) {
+            id(temp_container).set_bg_color(0x00BFFF);
+            id(temp_container).set_border_color(0x0000FF);
+          } else if (sel == 2) {
+            id(steam_container).set_bg_color(0x00BFFF);
+            id(steam_container).set_border_color(0x0000FF);
+          } else if (sel == 3) {
+            id(prebrew_container).set_bg_color(0x00BFFF);
+            id(prebrew_container).set_border_color(0x0000FF);
+          } else if (sel == 4) {
+            id(preinfusion_container).set_bg_color(0x00BFFF);
+            id(preinfusion_container).set_border_color(0x0000FF);
+          } else if (sel == 5) {
+            id(brewing_container).set_bg_color(0x00BFFF);
+            id(brewing_container).set_border_color(0x0000FF);
+          }
+
+  # Selection timeout timer
+  - id: selection_timeout_timer
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: |-
+          // Check if still selected and timeout expired
+          auto now = id(time_comp).now();
+          if (id(selected_element) >= 0 && now.timestamp >= id(selection_timeout)) {
+            id(selected_element) = -1;
+            script.execute: update_selection_highlight;
+            ESP_LOGD("ui", "Selection timeout");
+          }
+
+  # Handle encoder clockwise
+  - id: handle_encoder_cw
+    then:
+      - lambda: |-
+          int sel = id(selected_element);
+          if (sel < 0) return;  // Nothing selected
+          
+          // Store selection in global for use in actions
+          id(selected_element) = sel;
+          
+          // Reset timeout
+          auto now = id(time_comp).now();
+          id(selection_timeout) = now.timestamp + 3;
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 0;'
+          then:
+            - homeassistant.action:
+                action: switch.toggle
+                data:
+                  entity_id: ${lm_power}
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 1;'
+          then:
+            - lambda: |-
+                float current = id(lm_coffee_temp_sensor).state;
+                float new_temp = current + 0.1f;
+                if (new_temp > 100.0f) new_temp = 100.0f;
+                id(temp_new_value) = new_temp;
+            - homeassistant.action:
+                action: number.set_value
+                data:
+                  entity_id: ${lm_coffee_temp}
+                  value: !lambda 'return id(temp_new_value);'
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 2;'
+          then:
+            - lambda: |-
+                std::string current = id(lm_steam_level_sensor).state;
+                std::string next;
+                if (current == "Level1") next = "Level2";
+                else if (current == "Level2") next = "Level3";
+                else next = "Level1";
+                id(steam_new_value) = next;
+            - homeassistant.action:
+                action: select.select_option
+                data:
+                  entity_id: ${lm_steam_level}
+                  option: !lambda 'return id(steam_new_value);'
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 3;'
+          then:
+            - lambda: |-
+                std::string current = id(lm_prebrew_mode_sensor).state;
+                std::string next;
+                if (current == "PreBrewing") next = "PreInfusion";
+                else if (current == "PreInfusion") next = "Disabled";
+                else next = "PreBrewing";
+                id(prebrew_new_value) = next;
+            - homeassistant.action:
+                action: select.select_option
+                data:
+                  entity_id: ${lm_prebrew_mode}
+                  option: !lambda 'return id(prebrew_new_value);'
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 4;'
+          then:
+            - lambda: |-
+                float current = id(lm_preinfusion_time_sensor).state;
+                float new_time = current + 0.1f;
+                if (new_time > 25.0f) new_time = 25.0f;
+                id(preinfusion_new_value) = new_time;
+            - homeassistant.action:
+                action: number.set_value
+                data:
+                  entity_id: ${lm_preinfusion_time}
+                  value: !lambda 'return id(preinfusion_new_value);'
+
+  # Handle encoder counter-clockwise
+  - id: handle_encoder_ccw
+    then:
+      - lambda: |-
+          int sel = id(selected_element);
+          if (sel < 0) return;  // Nothing selected
+          
+          // Store selection in global for use in actions
+          id(selected_element) = sel;
+          
+          // Reset timeout
+          auto now = id(time_comp).now();
+          id(selection_timeout) = now.timestamp + 3;
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 0;'
+          then:
+            - homeassistant.action:
+                action: switch.toggle
+                data:
+                  entity_id: ${lm_power}
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 1;'
+          then:
+            - lambda: |-
+                float current = id(lm_coffee_temp_sensor).state;
+                float new_temp = current - 0.1f;
+                if (new_temp < 80.0f) new_temp = 80.0f;
+                id(temp_new_value) = new_temp;
+            - homeassistant.action:
+                action: number.set_value
+                data:
+                  entity_id: ${lm_coffee_temp}
+                  value: !lambda 'return id(temp_new_value);'
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 2;'
+          then:
+            - lambda: |-
+                std::string current = id(lm_steam_level_sensor).state;
+                std::string next;
+                if (current == "Level3") next = "Level2";
+                else if (current == "Level2") next = "Level1";
+                else next = "Level3";
+                id(steam_new_value) = next;
+            - homeassistant.action:
+                action: select.select_option
+                data:
+                  entity_id: ${lm_steam_level}
+                  option: !lambda 'return id(steam_new_value);'
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 3;'
+          then:
+            - lambda: |-
+                std::string current = id(lm_prebrew_mode_sensor).state;
+                std::string next;
+                if (current == "Disabled") next = "PreInfusion";
+                else if (current == "PreInfusion") next = "PreBrewing";
+                else next = "Disabled";
+                id(prebrew_new_value) = next;
+            - homeassistant.action:
+                action: select.select_option
+                data:
+                  entity_id: ${lm_prebrew_mode}
+                  option: !lambda 'return id(prebrew_new_value);'
+      - if:
+          condition:
+            lambda: 'return id(selected_element) == 4;'
+          then:
+            - lambda: |-
+                float current = id(lm_preinfusion_time_sensor).state;
+                float new_time = current - 0.1f;
+                if (new_time < 1.0f) new_time = 1.0f;
+                id(preinfusion_new_value) = new_time;
+            - homeassistant.action:
+                action: number.set_value
+                data:
+                  entity_id: ${lm_preinfusion_time}
+                  value: !lambda 'return id(preinfusion_new_value);'
+
+  # Update brewing duration
+  - id: update_brewing_duration
+    then:
+      - lambda: |-
+          std::string start_time_str = id(lm_status_sensor).state;
+          if (start_time_str.empty() || start_time_str == "null" || start_time_str == "unknown" || start_time_str == "None") {
+            id(brewing_duration) = 0.0f;
+            id(brewing_label).update_text("Brewing: --.-s");
+            return;
+          }
+          
+          // Increment brewing duration by 0.1s each second
+          // Note: This is a simplified approach. For accurate timing, you'd need to parse
+          // the ISO 8601 timestamp and calculate the actual difference
+          float duration = id(brewing_duration) + 0.1f;
+          
+          char buf[32];
+          snprintf(buf, sizeof(buf), "Brewing: %.1fs", duration);
+          id(brewing_label).update_text(std::string(buf));
+          id(brewing_duration) = duration;
+
+# Touch screen handlers are in waveshare.yaml, but we add element selection here
+# We'll use a lambda in the touchscreen on_touch to call our script
+
