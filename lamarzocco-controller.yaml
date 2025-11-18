@@ -148,6 +148,50 @@ globals:
     type: std::string
     restore_value: false
     #initial_value: ""
+  - id: power_pending
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: power_timeout_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: temp_pending
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: temp_timeout_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: steam_pending
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: steam_timeout_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: prebrew_pending
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: prebrew_timeout_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: preinfusion_pending
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: preinfusion_timeout_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: verification_success
+    type: bool
+    restore_value: false
+    initial_value: 'false'
     
   - id: power_label_text
     type: std::string
@@ -422,6 +466,15 @@ sensor:
             id: temp_label
             text: !lambda 'return id(temp_label_text);'
         - script.execute: update_selection_highlight
+        # Trigger verification if temp command pending and value matches
+        - if:
+            condition:
+              lambda: 'return id(temp_pending) && fabs(x - id(sent_temp_value)) < 0.05f;'
+            then:
+              - lambda: |-
+                  id(temp_pending) = false;
+                  id(verifying_element) = 1;
+              - script.execute: verify_ha_update
 
   # PreInfusion time
   - platform: homeassistant
@@ -439,6 +492,15 @@ sensor:
             id: preinfusion_label
             text: !lambda 'return id(preinfusion_label_text);'
         - script.execute: update_selection_highlight
+        # Trigger verification if preinfusion command pending and value matches
+        - if:
+            condition:
+              lambda: 'return id(preinfusion_pending) && fabs(x - id(sent_preinfusion_value)) < 0.05f;'
+            then:
+              - lambda: |-
+                  id(preinfusion_pending) = false;
+                  id(verifying_element) = 4;
+              - script.execute: verify_ha_update
 
 # Home Assistant Sensors - Reading machine state
 binary_sensor:
@@ -457,6 +519,15 @@ binary_sensor:
             id: power_label
             text: !lambda 'return id(power_label_text);'
         - script.execute: update_selection_highlight
+        # Trigger verification if power command pending
+        - if:
+            condition:
+              lambda: 'return id(power_pending);'
+            then:
+              - lambda: |-
+                  id(power_pending) = false;
+                  id(verifying_element) = 0;
+              - script.execute: verify_ha_update
 
 # Steam level (using text_sensor for select entity)
 text_sensor:
@@ -467,15 +538,23 @@ text_sensor:
       then:
         - lambda: |-
             std::string level = x;
-            // Extract level number from "Level1", "Level2", "Level3"
-            std::string level_num = level.length() > 5 ? level.substr(5) : level;
+            // Values are now "1", "2", "3" directly
             char buf[32];
-            snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
+            snprintf(buf, sizeof(buf), "Steam: %s", level.c_str());
             id(steam_label_text) = std::string(buf);
         - lvgl.label.update:
             id: steam_label
             text: !lambda 'return id(steam_label_text);'
         - script.execute: update_selection_highlight
+        # Trigger verification if steam command pending and value matches
+        - if:
+            condition:
+              lambda: 'return id(steam_pending) && id(sent_steam_value) == x;'
+            then:
+              - lambda: |-
+                  id(steam_pending) = false;
+                  id(verifying_element) = 2;
+              - script.execute: verify_ha_update
 
   - platform: homeassistant
     id: lm_prebrew_mode_sensor
@@ -490,6 +569,15 @@ text_sensor:
             id: prebrew_label
             text: !lambda 'return id(prebrew_label_text);'
         - script.execute: update_selection_highlight
+        # Trigger verification if prebrew command pending and value matches
+        - if:
+            condition:
+              lambda: 'return id(prebrew_pending) && id(sent_prebrew_value) == x;'
+            then:
+              - lambda: |-
+                  id(prebrew_pending) = false;
+                  id(verifying_element) = 3;
+              - script.execute: verify_ha_update
 
   # Machine status (for brewing start time)
   - platform: homeassistant
@@ -512,6 +600,7 @@ time:
       - cron: '* * * * * *'  # Every second
         then:
           - script.execute: update_brewing_duration
+          - script.execute: check_verification_timeouts
 
 # Scripts
 script:
@@ -641,9 +730,8 @@ script:
             else next = "1";
             id(steam_new_value) = next;
             // Update UI immediately
-            std::string level_num = next.length() > 5 ? next.substr(5) : next;
             char buf[32];
-            snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
+            snprintf(buf, sizeof(buf), "Steam: %s", next.c_str());
             id(steam_label_text) = std::string(buf);
             id(handle_steam_change) = true;
             id(send_ha_command) = true;
@@ -727,9 +815,8 @@ script:
             else next = "3";
             id(steam_new_value) = next;
             // Update UI immediately
-            std::string level_num = next.length() > 5 ? next.substr(5) : next;
             char buf[32];
-            snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
+            snprintf(buf, sizeof(buf), "Steam: %s", next.c_str());
             id(steam_label_text) = std::string(buf);
             id(handle_steam_change) = true;
             id(send_ha_command) = true;
@@ -777,12 +864,14 @@ script:
       - script.execute: send_ha_command_delayed
 
   # Delayed Home Assistant command sender (restart mode - resets delay if encoder keeps turning)
+  # This script only executes AFTER the encoder has stopped for 300ms
+  # Verification is only called from here, ensuring it only runs after the command is sent
   - id: send_ha_command_delayed
     mode: restart
     then:
-      - delay: 500ms  # Wait 500ms after last encoder movement before sending to HA
+      - delay: 300ms  # Wait 300ms after last encoder movement before sending to HA
       - lambda: |-
-          // After delay, check if we should still send the command
+          // After delay completes, check if we should still send the command
           // If send_ha_command flag is false, encoder was turned again (script restarted)
           // and we should not send this command
           if (!id(send_ha_command)) {
@@ -791,7 +880,7 @@ script:
           }
           // Clear flag to prevent duplicate sends
           id(send_ha_command) = false;
-          ESP_LOGD("encoder", "Sending delayed command to Home Assistant");
+          ESP_LOGD("encoder", "Encoder stopped - sending command to Home Assistant");
       - if:
           condition:
             lambda: 'return id(handle_power_toggle);'
@@ -809,12 +898,15 @@ script:
                 id(handle_temp_change) = false;
                 id(sent_temp_value) = id(temp_new_value);
                 id(verifying_element) = 1;  // Temperature element
+                id(temp_pending) = true;
+                id(temp_timeout_ms) = millis() + 10000;
+                ESP_LOGD("verify", "Temp command pending -> %.2f", (double)id(sent_temp_value));
             - homeassistant.action:
                 action: number.set_value
                 data:
                   entity_id: ${lm_coffee_temp}
                   value: !lambda 'return id(temp_new_value);'
-            - script.execute: verify_ha_update
+            # Verification will be triggered by sensor on_value callback when HA updates
       - if:
           condition:
             lambda: 'return id(handle_steam_change);'
@@ -823,12 +915,15 @@ script:
                 id(handle_steam_change) = false;
                 id(sent_steam_value) = id(steam_new_value);
                 id(verifying_element) = 2;  // Steam element
+                id(steam_pending) = true;
+                id(steam_timeout_ms) = millis() + 10000;
+                ESP_LOGD("verify", "Steam command pending -> %s", id(sent_steam_value).c_str());
             - homeassistant.action:
                 action: select.select_option
                 data:
                   entity_id: ${lm_steam_level}
                   option: !lambda 'return id(steam_new_value);'
-            - script.execute: verify_ha_update
+            # Verification will be triggered by sensor on_value callback when HA updates
       - if:
           condition:
             lambda: 'return id(handle_prebrew_change);'
@@ -837,12 +932,15 @@ script:
                 id(handle_prebrew_change) = false;
                 id(sent_prebrew_value) = id(prebrew_new_value);
                 id(verifying_element) = 3;  // Prebrew element
+                id(prebrew_pending) = true;
+                id(prebrew_timeout_ms) = millis() + 10000;
+                ESP_LOGD("verify", "Prebrew command pending -> %s", id(sent_prebrew_value).c_str());
             - homeassistant.action:
                 action: select.select_option
                 data:
                   entity_id: ${lm_prebrew_mode}
                   option: !lambda 'return id(prebrew_new_value);'
-            - script.execute: verify_ha_update
+            # Verification will be triggered by sensor on_value callback when HA updates
       - if:
           condition:
             lambda: 'return id(handle_preinfusion_change);'
@@ -851,12 +949,15 @@ script:
                 id(handle_preinfusion_change) = false;
                 id(sent_preinfusion_value) = id(preinfusion_new_value);
                 id(verifying_element) = 4;  // Preinfusion element
+                id(preinfusion_pending) = true;
+                id(preinfusion_timeout_ms) = millis() + 10000;
+                ESP_LOGD("verify", "Preinfusion command pending -> %.2f", (double)id(sent_preinfusion_value));
             - homeassistant.action:
                 action: number.set_value
                 data:
                   entity_id: ${lm_preinfusion_time}
                   value: !lambda 'return id(preinfusion_new_value);'
-            - script.execute: verify_ha_update
+            # Verification will be triggered by sensor on_value callback when HA updates
       - if:
           condition:
             lambda: 'return id(handle_power_toggle);'
@@ -864,11 +965,154 @@ script:
             - lambda: |-
                 id(handle_power_toggle) = false;
                 id(verifying_element) = 0;  // Power element
+                id(power_pending) = true;
+                id(power_timeout_ms) = millis() + 10000;
+                ESP_LOGD("verify", "Power command pending");
             - homeassistant.action:
                 action: switch.toggle
                 data:
                   entity_id: ${lm_power}
-            - script.execute: verify_ha_update
+            # Verification will be triggered by sensor on_state callback when HA updates
+
+  # Verify Home Assistant update and provide visual feedback
+  # This script is triggered by sensor callbacks when HA updates the value
+  # It verifies the received value matches what we sent, then provides visual feedback
+  - id: verify_ha_update
+    then:
+      - lambda: |-
+          int elem = id(verifying_element);
+          if (elem < 0) return;  // Not verifying anything
+          
+          bool verified = false;
+          
+          if (elem == 0) {
+            // Power - just verify it changed (can't easily verify toggle state)
+            verified = true;  // Assume success for toggle
+            ESP_LOGD("verify", "Power: verified (toggle)");
+          } else if (elem == 1) {
+            // Temperature - compare sent value with current sensor value
+            float sent = id(sent_temp_value);
+            float current = id(lm_coffee_temp_sensor).state;
+            // Allow small floating point differences
+            verified = (fabs(sent - current) < 0.15f);
+            ESP_LOGD("verify", "Temp: sent=%.1f, current=%.1f, verified=%d", sent, current, verified);
+          } else if (elem == 2) {
+            // Steam level - compare sent value with current sensor value
+            std::string sent = id(sent_steam_value);
+            std::string current = id(lm_steam_level_sensor).state;
+            // Values are now "1", "2", "3" directly
+            verified = (sent == current);
+            ESP_LOGD("verify", "Steam: sent=%s, current=%s, verified=%d", sent.c_str(), current.c_str(), verified);
+          } else if (elem == 3) {
+            // Prebrew mode - compare sent value with current sensor value
+            std::string sent = id(sent_prebrew_value);
+            std::string current = id(lm_prebrew_mode_sensor).state;
+            verified = (sent == current);
+            ESP_LOGD("verify", "Prebrew: sent=%s, current=%s, verified=%d", sent.c_str(), current.c_str(), verified);
+          } else if (elem == 4) {
+            // Preinfusion time - compare sent value with current sensor value
+            float sent = id(sent_preinfusion_value);
+            float current = id(lm_preinfusion_time_sensor).state;
+            verified = (fabs(sent - current) < 0.15f);
+            ESP_LOGD("verify", "Preinfusion: sent=%.1f, current=%.1f, verified=%d", sent, current, verified);
+          }
+          
+          if (verified) {
+            id(verification_success) = true;
+          } else {
+            ESP_LOGD("verify", "Verification failed - values don't match");
+          }
+      - if:
+          condition:
+            lambda: 'return id(verification_success);'
+          then:
+            - lambda: |-
+                id(verification_success) = false;
+                int elem = id(verifying_element);
+                if (elem < 0) return;
+                ESP_LOGD("verify", "Showing green flash for element %d", elem);
+                
+                // Deselect the element first
+                id(selected_element) = -1;
+            # Reset selection highlight first
+            - script.execute: update_selection_highlight
+            - lambda: |-
+                int elem = id(verifying_element);
+                // Now show green border flash
+            # Update LVGL objects directly to show green border
+            - if:
+                condition:
+                  lambda: 'return id(verifying_element) == 0;'
+                then:
+                  - lvgl.obj.update:
+                      id: power_container
+                      border_color: !lambda 'return lv_color_hex(0x00FF00);'
+            - if:
+                condition:
+                  lambda: 'return id(verifying_element) == 1;'
+                then:
+                  - lvgl.obj.update:
+                      id: temp_container
+                      border_color: !lambda 'return lv_color_hex(0x00FF00);'
+            - if:
+                condition:
+                  lambda: 'return id(verifying_element) == 2;'
+                then:
+                  - lvgl.obj.update:
+                      id: steam_container
+                      border_color: !lambda 'return lv_color_hex(0x00FF00);'
+            - if:
+                condition:
+                  lambda: 'return id(verifying_element) == 3;'
+                then:
+                  - lvgl.obj.update:
+                      id: prebrew_container
+                      border_color: !lambda 'return lv_color_hex(0x00FF00);'
+            - if:
+                condition:
+                  lambda: 'return id(verifying_element) == 4;'
+                then:
+                  - lvgl.obj.update:
+                      id: preinfusion_container
+                      border_color: !lambda 'return lv_color_hex(0x00FF00);'
+            - delay: 500ms  # Show green border for 500ms
+            - lambda: |-
+                // Clear verifying element
+                int elem = id(verifying_element);
+                id(verifying_element) = -1;
+                ESP_LOGD("verify", "Clearing verification for element %d", elem);
+            # Reset to normal colors using update_selection_highlight
+            - script.execute: update_selection_highlight
+      - if:
+          condition:
+            lambda: 'return !id(verification_success) && id(verifying_element) >= 0;'
+          then:
+            - lambda: |-
+                // Verification failed - values don't match
+                ESP_LOGD("verify", "Verification failed - values don't match");
+                // Still deselect but without green flash
+                id(selected_element) = -1;
+                id(verifying_element) = -1;
+            - script.execute: update_selection_highlight
+  # Periodic timeout checker for pending verifications
+  - id: check_verification_timeouts
+    then:
+      - lambda: |-
+          uint32_t now = millis();
+          auto check_timeout = [&](bool &pending, uint32_t &deadline, const char *name) {
+            if (pending) {
+              int32_t remaining = static_cast<int32_t>(deadline - now);
+              if (remaining <= 0) {
+                ESP_LOGW("verify", "%s command timed out", name);
+                pending = false;
+              }
+            }
+          };
+          check_timeout(id(power_pending), id(power_timeout_ms), "Power");
+          check_timeout(id(temp_pending), id(temp_timeout_ms), "Temp");
+          check_timeout(id(steam_pending), id(steam_timeout_ms), "Steam");
+          check_timeout(id(prebrew_pending), id(prebrew_timeout_ms), "Prebrew");
+          check_timeout(id(preinfusion_pending), id(preinfusion_timeout_ms), "Preinfusion");
 
   # Initialize UI values from Home Assistant on boot
   - id: initialize_ui_values
@@ -902,9 +1146,8 @@ script:
             id(power_label_text) = std::string(buf);
           }
           if (!steam.empty()) {
-            std::string level_num = steam.length() > 5 ? steam.substr(5) : steam;
             char buf[32];
-            snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
+            snprintf(buf, sizeof(buf), "Steam: %s", steam.c_str());
             id(steam_label_text) = std::string(buf);
           }
           if (!prebrew.empty()) {
