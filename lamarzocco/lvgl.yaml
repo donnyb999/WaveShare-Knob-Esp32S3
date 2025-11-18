@@ -1,0 +1,4 @@
+# LVGL configuration is included in the main file
+# This file is kept for consistency with the package structure
+# All LVGL widgets are defined in lamarzocco-controller.yaml
+
