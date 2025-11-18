@@ -112,6 +112,10 @@ globals:
     type: bool
     restore_value: false
     initial_value: 'false'
+  - id: send_ha_command
+    type: bool
+    restore_value: false
+    initial_value: 'false'
     
   - id: power_label_text
     type: std::string
@@ -355,6 +359,7 @@ sensor:
     publish_initial_value: true
     on_clockwise:
       then:
+        - script.execute: screentime  # Reactivate backlight
         - if:
             condition:
               lambda: 'return id(selected_element) >= 0;'
@@ -362,6 +367,7 @@ sensor:
               - script.execute: handle_encoder_cw
     on_anticlockwise:
       then:
+        - script.execute: screentime  # Reactivate backlight
         - if:
             condition:
               lambda: 'return id(selected_element) >= 0;'
@@ -569,17 +575,23 @@ script:
           auto now = id(time_comp).now();
           id(selection_timeout) = now.timestamp + 3;
           
-          // Handle based on selected element
+          // Update UI immediately and prepare value for delayed HA command
           if (sel == 0) {
-            // Power - toggle
+            // Power - toggle immediately (no delay needed for toggle)
             id(handle_power_toggle) = true;
+            id(send_ha_command) = true;
           } else if (sel == 1) {
             // Temperature - increase
             float current = id(lm_coffee_temp_sensor).state;
             float new_temp = current + 0.1f;
             if (new_temp > 100.0f) new_temp = 100.0f;
             id(temp_new_value) = new_temp;
+            // Update UI immediately
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Temp: %.1fC", new_temp);
+            id(temp_label_text) = std::string(buf);
             id(handle_temp_change) = true;
+            id(send_ha_command) = true;
           } else if (sel == 2) {
             // Steam level - increase
             std::string current = id(lm_steam_level_sensor).state;
@@ -588,7 +600,13 @@ script:
             else if (current == "Level2") next = "Level3";
             else next = "Level1";
             id(steam_new_value) = next;
+            // Update UI immediately
+            std::string level_num = next.length() > 5 ? next.substr(5) : next;
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
+            id(steam_label_text) = std::string(buf);
             id(handle_steam_change) = true;
+            id(send_ha_command) = true;
           } else if (sel == 3) {
             // Prebrew mode - cycle forward
             std::string current = id(lm_prebrew_mode_sensor).state;
@@ -597,64 +615,40 @@ script:
             else if (current == "PreInfusion") next = "Disabled";
             else next = "PreBrewing";
             id(prebrew_new_value) = next;
+            // Update UI immediately
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreBrew: %s", next.c_str());
+            id(prebrew_label_text) = std::string(buf);
             id(handle_prebrew_change) = true;
+            id(send_ha_command) = true;
           } else if (sel == 4) {
             // Preinfusion time - increase
             float current = id(lm_preinfusion_time_sensor).state;
             float new_time = current + 0.1f;
             if (new_time > 25.0f) new_time = 25.0f;
             id(preinfusion_new_value) = new_time;
+            // Update UI immediately
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreInf: %.1fs", new_time);
+            id(preinfusion_label_text) = std::string(buf);
             id(handle_preinfusion_change) = true;
+            id(send_ha_command) = true;
           }
-      - if:
-          condition:
-            lambda: 'return id(handle_power_toggle);'
-          then:
-            - lambda: 'id(handle_power_toggle) = false;'
-            - homeassistant.action:
-                action: switch.toggle
-                data:
-                  entity_id: ${lm_power}
-      - if:
-          condition:
-            lambda: 'return id(handle_temp_change);'
-          then:
-            - lambda: 'id(handle_temp_change) = false;'
-            - homeassistant.action:
-                action: number.set_value
-                data:
-                  entity_id: ${lm_coffee_temp}
-                  value: !lambda 'return id(temp_new_value);'
-      - if:
-          condition:
-            lambda: 'return id(handle_steam_change);'
-          then:
-            - lambda: 'id(handle_steam_change) = false;'
-            - homeassistant.action:
-                action: select.select_option
-                data:
-                  entity_id: ${lm_steam_level}
-                  option: !lambda 'return id(steam_new_value);'
-      - if:
-          condition:
-            lambda: 'return id(handle_prebrew_change);'
-          then:
-            - lambda: 'id(handle_prebrew_change) = false;'
-            - homeassistant.action:
-                action: select.select_option
-                data:
-                  entity_id: ${lm_prebrew_mode}
-                  option: !lambda 'return id(prebrew_new_value);'
-      - if:
-          condition:
-            lambda: 'return id(handle_preinfusion_change);'
-          then:
-            - lambda: 'id(handle_preinfusion_change) = false;'
-            - homeassistant.action:
-                action: number.set_value
-                data:
-                  entity_id: ${lm_preinfusion_time}
-                  value: !lambda 'return id(preinfusion_new_value);'
+      // Update UI labels immediately
+      - lvgl.label.update:
+          id: temp_label
+          text: !lambda 'return id(temp_label_text);'
+      - lvgl.label.update:
+          id: steam_label
+          text: !lambda 'return id(steam_label_text);'
+      - lvgl.label.update:
+          id: prebrew_label
+          text: !lambda 'return id(prebrew_label_text);'
+      - lvgl.label.update:
+          id: preinfusion_label
+          text: !lambda 'return id(preinfusion_label_text);'
+      // Start/restart delayed HA command script
+      - script.execute: send_ha_command_delayed
 
   # Handle encoder counter-clockwise
   - id: handle_encoder_ccw
@@ -667,17 +661,23 @@ script:
           auto now = id(time_comp).now();
           id(selection_timeout) = now.timestamp + 3;
           
-          // Handle based on selected element
+          // Update UI immediately and prepare value for delayed HA command
           if (sel == 0) {
-            // Power - toggle
+            // Power - toggle immediately (no delay needed for toggle)
             id(handle_power_toggle) = true;
+            id(send_ha_command) = true;
           } else if (sel == 1) {
             // Temperature - decrease
             float current = id(lm_coffee_temp_sensor).state;
             float new_temp = current - 0.1f;
             if (new_temp < 80.0f) new_temp = 80.0f;
             id(temp_new_value) = new_temp;
+            // Update UI immediately
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Temp: %.1fC", new_temp);
+            id(temp_label_text) = std::string(buf);
             id(handle_temp_change) = true;
+            id(send_ha_command) = true;
           } else if (sel == 2) {
             // Steam level - decrease
             std::string current = id(lm_steam_level_sensor).state;
@@ -686,7 +686,13 @@ script:
             else if (current == "Level2") next = "Level1";
             else next = "Level3";
             id(steam_new_value) = next;
+            // Update UI immediately
+            std::string level_num = next.length() > 5 ? next.substr(5) : next;
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Steam: %s", level_num.c_str());
+            id(steam_label_text) = std::string(buf);
             id(handle_steam_change) = true;
+            id(send_ha_command) = true;
           } else if (sel == 3) {
             // Prebrew mode - cycle backward
             std::string current = id(lm_prebrew_mode_sensor).state;
@@ -695,15 +701,54 @@ script:
             else if (current == "PreInfusion") next = "PreBrewing";
             else next = "Disabled";
             id(prebrew_new_value) = next;
+            // Update UI immediately
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreBrew: %s", next.c_str());
+            id(prebrew_label_text) = std::string(buf);
             id(handle_prebrew_change) = true;
+            id(send_ha_command) = true;
           } else if (sel == 4) {
             // Preinfusion time - decrease
             float current = id(lm_preinfusion_time_sensor).state;
             float new_time = current - 0.1f;
             if (new_time < 1.0f) new_time = 1.0f;
             id(preinfusion_new_value) = new_time;
+            // Update UI immediately
+            char buf[32];
+            snprintf(buf, sizeof(buf), "PreInf: %.1fs", new_time);
+            id(preinfusion_label_text) = std::string(buf);
             id(handle_preinfusion_change) = true;
+            id(send_ha_command) = true;
           }
+      // Update UI labels immediately
+      - lvgl.label.update:
+          id: temp_label
+          text: !lambda 'return id(temp_label_text);'
+      - lvgl.label.update:
+          id: steam_label
+          text: !lambda 'return id(steam_label_text);'
+      - lvgl.label.update:
+          id: prebrew_label
+          text: !lambda 'return id(prebrew_label_text);'
+      - lvgl.label.update:
+          id: preinfusion_label
+          text: !lambda 'return id(preinfusion_label_text);'
+      // Start/restart delayed HA command script
+      - script.execute: send_ha_command_delayed
+
+  # Delayed Home Assistant command sender (restart mode - resets delay if encoder keeps turning)
+  - id: send_ha_command_delayed
+    mode: restart
+    then:
+      - delay: 300ms  # Wait 300ms after last encoder movement
+      - lambda: |-
+          // Check if flag is still set (encoder stopped turning)
+          if (!id(send_ha_command)) {
+            // Flag was cleared, don't send command
+            return;
+          }
+          // Clear flag before sending (prevents duplicate sends)
+          id(send_ha_command) = false;
       - if:
           condition:
             lambda: 'return id(handle_power_toggle);'
