@@ -54,9 +54,13 @@ font:
   - file: "gfonts://Roboto"
     id: roboto_48
     size: 48
+  - file: "gfonts://Material+Symbols+Outlined"
+    id: icon_font
+    glyphs: ["\uE8AC", "\uE541", "\uE1A3", "\uE429", "\uE425", "\uE85C"]
+    size: 36
 
 image:
-  - file: "https://github.com/donnyb999/WaveShare-Knob-Esp32S3/blob/main/lamarzocco/lm logo.png"
+  - file: "https://github.com/donnyb999/WaveShare-Knob-Esp32S3/blob/main/lamarzocco/lm%20logo.png?raw=true"
     id: lm_logo_background_image
     type: RGB565
     resize: 360x360
@@ -203,32 +207,52 @@ globals:
   - id: power_label_text
     type: std::string
     restore_value: false
-    initial_value: '"Power: OFF"'
+    initial_value: '"OFF"'
     
   - id: temp_label_text
     type: std::string
     restore_value: false
-    initial_value: '"Temp: --.-C"'
+    initial_value: '"--.-C"'
     
   - id: steam_label_text
     type: std::string
     restore_value: false
-    initial_value: '"Steam: --"'
+    initial_value: '"--"'
     
   - id: prebrew_label_text
     type: std::string
     restore_value: false
-    initial_value: '"PreBrew: --"'
+    initial_value: '"--"'
     
   - id: preinfusion_label_text
     type: std::string
     restore_value: false
-    initial_value: '"PreInf: --.-s"'
+    initial_value: '"--.-s"'
     
   - id: brewing_label_text
     type: std::string
     restore_value: false
-    initial_value: '"Brewing: --.-s"'
+    initial_value: '"--.-s"'
+  
+  - id: center_title_text
+    type: std::string
+    restore_value: false
+    initial_value: '"Ready"'
+  
+  - id: center_value_text
+    type: std::string
+    restore_value: false
+    initial_value: '"Tap a control"'
+  
+  - id: center_icon_text
+    type: std::string
+    restore_value: false
+    initial_value: '""'
+  
+  - id: center_active_element
+    type: int
+    restore_value: false
+    initial_value: '-1'
     
   - id: power_bg_color
     type: int
@@ -306,10 +330,11 @@ lvgl:
             id: lm_logo_background
             src: lm_logo_background_image
             align: CENTER
-            width: 100%
-            height: 100%
-            recolor: 0x333333
-            recolor_opa: 80%
+            width: 360
+            height: 360
+            zoom: 256
+            image_recolor: 0x333333
+            image_recolor_opa: 80%
             
         # Title
         - label:
@@ -319,142 +344,213 @@ lvgl:
             text_color: 0xFFFFFF
             align: TOP_MID
             y: 12
+        
+        # Central detail view
+        - obj:
+            id: center_container
+            width: 220
+            height: 220
+            align: CENTER
+            radius: 110
+            bg_color: 0x050505
+            bg_opa: 95%
+            border_width: 4
+            border_color: 0x1F8A70
+            pad_all: 12
+            widgets:
+              - label:
+                  id: center_icon_label
+                  text: !lambda 'return id(center_icon_text);'
+                  text_font: roboto_48
+                  text_color: 0xA5FF8A
+                  align: CENTER
+                  y: -40
+              - label:
+                  id: center_title_label
+                  text: !lambda 'return id(center_title_text);'
+                  text_font: roboto_28
+                  text_color: 0xFFFFFF
+                  align: CENTER
+                  y: 10
+              - label:
+                  id: center_value_label
+                  text: !lambda 'return id(center_value_text);'
+                  text_font: roboto_36
+                  text_color: 0xFFFFFF
+                  align: CENTER
+                  y: 60
             
         # 1. Power State (selectable)
         - obj:
             id: power_container
-            width: 230
-            height: 70
+            width: 110
+            height: 110
             align: CENTER
-            y: -120
+            y: -150
             bg_color: 0x1A1A1A
-            bg_opa: 85%
-            border_width: 2
+            bg_opa: 90%
+            border_width: 3
             border_color: 0x333333
-            radius: 30
-            pad_all: 6
+            radius: 55
+            pad_all: 4
             widgets:
+              - label:
+                  text: "⏻"
+                  text_font: roboto_48
+                  text_color: 0xA5FF8A
+                  align: CENTER
+                  y: -18
               - label:
                   id: power_label
                   text: !lambda 'return id(power_label_text);'
                   text_font: roboto
                   text_color: 0xFFFFFF
                   align: CENTER
-                  width: 100%
+                  y: 22
                   
         # 2. Coffee Boiler Temperature (selectable)
         - obj:
             id: temp_container
-            width: 160
-            height: 70
+            width: 110
+            height: 110
             align: CENTER
-            x: -120
-            y: -10
+            x: -140
+            y: -20
             bg_color: 0x1A1A1A
-            bg_opa: 85%
-            border_width: 2
+            bg_opa: 90%
+            border_width: 3
             border_color: 0x333333
-            radius: 30
-            pad_all: 6
+            radius: 55
+            pad_all: 4
             widgets:
+              - label:
+                  text: "℃"
+                  text_font: roboto_48
+                  text_color: 0xA5FF8A
+                  align: CENTER
+                  y: -18
               - label:
                   id: temp_label
                   text: !lambda 'return id(temp_label_text);'
                   text_font: roboto
                   text_color: 0xFFFFFF
                   align: CENTER
-                  width: 100%
+                  y: 22
                   
         # 3. Steam Power Level (selectable)
         - obj:
             id: steam_container
-            width: 160
-            height: 70
+            width: 110
+            height: 110
             align: CENTER
-            x: 120
-            y: -10
+            x: 140
+            y: -20
             bg_color: 0x1A1A1A
-            bg_opa: 85%
-            border_width: 2
+            bg_opa: 90%
+            border_width: 3
             border_color: 0x333333
-            radius: 30
-            pad_all: 6
+            radius: 55
+            pad_all: 4
             widgets:
+              - label:
+                  text: "♨"
+                  text_font: roboto_48
+                  text_color: 0xA5FF8A
+                  align: CENTER
+                  y: -18
               - label:
                   id: steam_label
                   text: !lambda 'return id(steam_label_text);'
                   text_font: roboto
                   text_color: 0xFFFFFF
                   align: CENTER
-                  width: 100%
+                  y: 22
                   
         # 4. Prebrewing Mode (selectable)
         - obj:
             id: prebrew_container
-            width: 160
-            height: 70
+            width: 110
+            height: 110
             align: CENTER
-            x: -120
-            y: 90
+            x: -140
+            y: 110
             bg_color: 0x1A1A1A
-            bg_opa: 85%
-            border_width: 2
+            bg_opa: 90%
+            border_width: 3
             border_color: 0x333333
-            radius: 30
-            pad_all: 6
+            radius: 55
+            pad_all: 4
             widgets:
+              - label:
+                  text: "⚙"
+                  text_font: roboto_48
+                  text_color: 0xA5FF8A
+                  align: CENTER
+                  y: -18
               - label:
                   id: prebrew_label
                   text: !lambda 'return id(prebrew_label_text);'
                   text_font: roboto
                   text_color: 0xFFFFFF
                   align: CENTER
-                  width: 100%
+                  y: 22
                   
         # 5. PreInfusion Time (selectable)
         - obj:
             id: preinfusion_container
-            width: 160
-            height: 70
+            width: 110
+            height: 110
             align: CENTER
-            x: 120
-            y: 90
+            x: 140
+            y: 110
             bg_color: 0x1A1A1A
-            bg_opa: 85%
-            border_width: 2
+            bg_opa: 90%
+            border_width: 3
             border_color: 0x333333
-            radius: 30
-            pad_all: 6
+            radius: 55
+            pad_all: 4
             widgets:
+              - label:
+                  text: "⏲"
+                  text_font: roboto_48
+                  text_color: 0xA5FF8A
+                  align: CENTER
+                  y: -18
               - label:
                   id: preinfusion_label
                   text: !lambda 'return id(preinfusion_label_text);'
                   text_font: roboto
                   text_color: 0xFFFFFF
                   align: CENTER
-                  width: 100%
+                  y: 22
                   
         # 6. Brewing Duration (selectable, read-only display)
         - obj:
             id: brewing_container
-            width: 200
-            height: 70
+            width: 110
+            height: 110
             align: CENTER
-            y: 135
+            y: 150
             bg_color: 0x1A1A1A
-            bg_opa: 85%
-            border_width: 2
+            bg_opa: 90%
+            border_width: 3
             border_color: 0x333333
-            radius: 30
-            pad_all: 6
+            radius: 55
+            pad_all: 4
             widgets:
+              - label:
+                  text: "☕"
+                  text_font: roboto_48
+                  text_color: 0xA5FF8A
+                  align: CENTER
+                  y: -18
               - label:
                   id: brewing_label
                   text: !lambda 'return id(brewing_label_text);'
                   text_font: roboto
                   text_color: 0xFFFFFF
                   align: CENTER
-                  width: 100%
+                  y: 22
 
 # Rotary Encoder and Home Assistant Sensors
 sensor:
@@ -495,11 +591,12 @@ sensor:
       then:
         - lambda: |-
             char buf[32];
-            snprintf(buf, sizeof(buf), "Temp: %.1fC", x);
+            snprintf(buf, sizeof(buf), "%.1fC", x);
             id(temp_label_text) = std::string(buf);
         - lvgl.label.update:
             id: temp_label
             text: !lambda 'return id(temp_label_text);'
+        - script.execute: refresh_center_display
         - script.execute: update_selection_highlight
         # Trigger verification if temp command pending and value matches
         - if:
@@ -521,11 +618,12 @@ sensor:
       then:
         - lambda: |-
             char buf[32];
-            snprintf(buf, sizeof(buf), "PreInf: %.1fs", x);
+            snprintf(buf, sizeof(buf), "%.1fs", x);
             id(preinfusion_label_text) = std::string(buf);
         - lvgl.label.update:
             id: preinfusion_label
             text: !lambda 'return id(preinfusion_label_text);'
+        - script.execute: refresh_center_display
         - script.execute: update_selection_highlight
         # Trigger verification if preinfusion command pending and value matches
         - if:
@@ -547,12 +645,11 @@ binary_sensor:
       then:
         - lambda: |-
             std::string state_str = x ? "ON" : "OFF";
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Power: %s", state_str.c_str());
-            id(power_label_text) = std::string(buf);
+            id(power_label_text) = state_str;
         - lvgl.label.update:
             id: power_label
             text: !lambda 'return id(power_label_text);'
+        - script.execute: refresh_center_display
         - script.execute: update_selection_highlight
         # Trigger verification if power command pending
         - if:
@@ -574,12 +671,11 @@ text_sensor:
         - lambda: |-
             std::string level = x;
             // Values are now "1", "2", "3" directly
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Steam: %s", level.c_str());
-            id(steam_label_text) = std::string(buf);
+            id(steam_label_text) = level;
         - lvgl.label.update:
             id: steam_label
             text: !lambda 'return id(steam_label_text);'
+        - script.execute: refresh_center_display
         - script.execute: update_selection_highlight
         # Trigger verification if steam command pending and value matches
         - if:
@@ -597,12 +693,11 @@ text_sensor:
     on_value:
       then:
         - lambda: |-
-            char buf[32];
-            snprintf(buf, sizeof(buf), "PreBrew: %s", x.c_str());
-            id(prebrew_label_text) = std::string(buf);
+            id(prebrew_label_text) = x;
         - lvgl.label.update:
             id: prebrew_label
             text: !lambda 'return id(prebrew_label_text);'
+        - script.execute: refresh_center_display
         - script.execute: update_selection_highlight
         # Trigger verification if prebrew command pending and value matches
         - if:
@@ -639,6 +734,79 @@ time:
 
 # Scripts
 script:
+  # Update center detail view with current focus element
+  - id: refresh_center_display
+    then:
+      - lambda: |-
+          int elem = id(center_active_element);
+          std::string title = "Machine";
+          std::string value = "Tap a control";
+          std::string icon = "";
+          
+          auto apply_value = [&](const std::string &src, const char *fallback) {
+            if (!src.empty()) value = src;
+            else value = fallback;
+          };
+          
+          switch (elem) {
+            case 0:
+              title = "Power";
+              icon = "⏻";
+              apply_value(id(power_label_text), "--");
+              break;
+            case 1:
+              title = "Temperature";
+              icon = "℃";
+              apply_value(id(temp_label_text), "--.-C");
+              break;
+            case 2:
+              title = "Steam";
+              icon = "♨";
+              apply_value(id(steam_label_text), "--");
+              break;
+            case 3:
+              title = "Prebrew";
+              icon = "⚙";
+              apply_value(id(prebrew_label_text), "--");
+              break;
+            case 4:
+              title = "Preinfusion";
+              icon = "⏲";
+              apply_value(id(preinfusion_label_text), "--.-s");
+              break;
+            case 5:
+              title = "Brewing";
+              icon = "☕";
+              apply_value(id(brewing_label_text), "--.-s");
+              break;
+            default:
+              title = "Ready";
+              icon = "";
+              value = "Tap a control";
+              break;
+          }
+          
+          id(center_title_text) = title;
+          id(center_value_text) = value;
+          id(center_icon_text) = icon;
+      - lvgl.label.update:
+          id: center_title_label
+          text: !lambda 'return id(center_title_text);'
+      - lvgl.label.update:
+          id: center_value_label
+          text: !lambda 'return id(center_value_text);'
+      - lvgl.label.update:
+          id: center_icon_label
+          text: !lambda 'return id(center_icon_text);'
+
+  - id: set_center_focus
+    parameters:
+      element: int
+    then:
+      - lambda: |-
+          id(center_active_element) = element;
+      - script.execute: refresh_center_display
+
   # Handle touch selection
   - id: select_element
     parameters:
@@ -658,6 +826,9 @@ script:
             // Preinfusion time - sync working value with current sensor value
             id(working_preinfusion_value) = id(lm_preinfusion_time_sensor).state;
           }
+      - script.execute:
+          id: set_center_focus
+          element: !lambda 'return element;'
       - script.execute: update_selection_highlight
       - script.execute: selection_timeout_timer
 
@@ -755,7 +926,7 @@ script:
             id(temp_new_value) = new_temp;
             // Update UI immediately
             char buf[32];
-            snprintf(buf, sizeof(buf), "Temp: %.1fC", new_temp);
+            snprintf(buf, sizeof(buf), "%.1fC", new_temp);
             id(temp_label_text) = std::string(buf);
             id(handle_temp_change) = true;
             id(send_ha_command) = true;
@@ -768,9 +939,7 @@ script:
             else next = "1";
             id(steam_new_value) = next;
             // Update UI immediately
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Steam: %s", next.c_str());
-            id(steam_label_text) = std::string(buf);
+            id(steam_label_text) = next;
             id(handle_steam_change) = true;
             id(send_ha_command) = true;
           } else if (sel == 3) {
@@ -782,9 +951,7 @@ script:
             else next = "prebrew";
             id(prebrew_new_value) = next;
             // Update UI immediately
-            char buf[32];
-            snprintf(buf, sizeof(buf), "PreBrew: %s", next.c_str());
-            id(prebrew_label_text) = std::string(buf);
+            id(prebrew_label_text) = next;
             id(handle_prebrew_change) = true;
             id(send_ha_command) = true;
           } else if (sel == 4) {
@@ -795,7 +962,7 @@ script:
             id(preinfusion_new_value) = new_time;
             // Update UI immediately
             char buf[32];
-            snprintf(buf, sizeof(buf), "PreInf: %.1fs", new_time);
+            snprintf(buf, sizeof(buf), "%.1fs", new_time);
             id(preinfusion_label_text) = std::string(buf);
             id(handle_preinfusion_change) = true;
             id(send_ha_command) = true;
@@ -813,6 +980,7 @@ script:
       - lvgl.label.update:
           id: preinfusion_label
           text: !lambda 'return id(preinfusion_label_text);'
+      - script.execute: refresh_center_display
       # Start/restart delayed HA command script
       - script.execute: send_ha_command_delayed
 
@@ -840,7 +1008,7 @@ script:
             id(temp_new_value) = new_temp;
             // Update UI immediately
             char buf[32];
-            snprintf(buf, sizeof(buf), "Temp: %.1fC", new_temp);
+            snprintf(buf, sizeof(buf), "%.1fC", new_temp);
             id(temp_label_text) = std::string(buf);
             id(handle_temp_change) = true;
             id(send_ha_command) = true;
@@ -853,9 +1021,7 @@ script:
             else next = "3";
             id(steam_new_value) = next;
             // Update UI immediately
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Steam: %s", next.c_str());
-            id(steam_label_text) = std::string(buf);
+            id(steam_label_text) = next;
             id(handle_steam_change) = true;
             id(send_ha_command) = true;
           } else if (sel == 3) {
@@ -867,9 +1033,7 @@ script:
             else next = "disabled";
             id(prebrew_new_value) = next;
             // Update UI immediately
-            char buf[32];
-            snprintf(buf, sizeof(buf), "PreBrew: %s", next.c_str());
-            id(prebrew_label_text) = std::string(buf);
+            id(prebrew_label_text) = next;
             id(handle_prebrew_change) = true;
             id(send_ha_command) = true;
           } else if (sel == 4) {
@@ -880,7 +1044,7 @@ script:
             id(preinfusion_new_value) = new_time;
             // Update UI immediately
             char buf[32];
-            snprintf(buf, sizeof(buf), "PreInf: %.1fs", new_time);
+            snprintf(buf, sizeof(buf), "%.1fs", new_time);
             id(preinfusion_label_text) = std::string(buf);
             id(handle_preinfusion_change) = true;
             id(send_ha_command) = true;
@@ -898,6 +1062,7 @@ script:
       - lvgl.label.update:
           id: preinfusion_label
           text: !lambda 'return id(preinfusion_label_text);'
+      - script.execute: refresh_center_display
       # Start/restart delayed HA command script
       - script.execute: send_ha_command_delayed
 
@@ -1169,29 +1334,23 @@ script:
           // Update labels manually if sensors haven't fired yet
           if (temp > 0) {
             char buf[32];
-            snprintf(buf, sizeof(buf), "Temp: %.1fC", temp);
+            snprintf(buf, sizeof(buf), "%.1fC", temp);
             id(temp_label_text) = std::string(buf);
           }
           if (preinf > 0) {
             char buf[32];
-            snprintf(buf, sizeof(buf), "PreInf: %.1fs", preinf);
+            snprintf(buf, sizeof(buf), "%.1fs", preinf);
             id(preinfusion_label_text) = std::string(buf);
           }
           {
             std::string state_str = power ? "ON" : "OFF";
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Power: %s", state_str.c_str());
-            id(power_label_text) = std::string(buf);
+            id(power_label_text) = state_str;
           }
           if (!steam.empty()) {
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Steam: %s", steam.c_str());
-            id(steam_label_text) = std::string(buf);
+            id(steam_label_text) = steam;
           }
           if (!prebrew.empty()) {
-            char buf[32];
-            snprintf(buf, sizeof(buf), "PreBrew: %s", prebrew.c_str());
-            id(prebrew_label_text) = std::string(buf);
+            id(prebrew_label_text) = prebrew;
           }
       - lvgl.label.update:
           id: temp_label
@@ -1208,6 +1367,7 @@ script:
       - lvgl.label.update:
           id: prebrew_label
           text: !lambda 'return id(prebrew_label_text);'
+      - script.execute: refresh_center_display
 
   # Update brewing duration
   - id: update_brewing_duration
@@ -1216,7 +1376,7 @@ script:
           std::string start_time_str = id(lm_status_sensor).state;
           if (start_time_str.empty() || start_time_str == "null" || start_time_str == "unknown" || start_time_str == "None") {
             id(brewing_duration) = 0.0f;
-            id(brewing_label_text) = "Brewing: --.-s";
+            id(brewing_label_text) = "--.-s";
           } else {
             // Increment brewing duration by 0.1s each second
             // Note: This is a simplified approach. For accurate timing, you'd need to parse
@@ -1224,13 +1384,14 @@ script:
             float duration = id(brewing_duration) + 0.1f;
             
             char buf[32];
-            snprintf(buf, sizeof(buf), "Brewing: %.1fs", duration);
+            snprintf(buf, sizeof(buf), "%.1fs", duration);
             id(brewing_label_text) = std::string(buf);
             id(brewing_duration) = duration;
           }
       - lvgl.label.update:
           id: brewing_label
           text: !lambda 'return id(brewing_label_text);'
+      - script.execute: refresh_center_display
 
 # Touch screen handlers are in waveshare.yaml, but we add element selection here
 # We'll use a lambda in the touchscreen on_touch to call our script
