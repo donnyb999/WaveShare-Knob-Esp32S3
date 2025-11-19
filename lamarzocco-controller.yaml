@@ -56,7 +56,7 @@ font:
     size: 48
 
 image:
-  - file: "lamarzocco/lm logo.png"
+  - file: "https://github.com/donnyb999/WaveShare-Knob-Esp32S3/blob/main/lamarzocco/lm logo.png"
     id: lm_logo_background_image
     type: RGB565
     resize: 360x360
